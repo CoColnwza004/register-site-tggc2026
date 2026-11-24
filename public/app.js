@@ -306,6 +306,7 @@
     $("#formError").hidden = true;
     refresh();
     if (!instant) window.scrollTo({ top: 0, behavior: "auto" });
+    queueCue();
   }
 
   function nextStep() {
@@ -976,6 +977,7 @@
     if (name === "home") requestAnimationFrame(paintBackgrounds);
     if (name === "register") goStep(step, true);
     if (name === "ticket") { showTicket(current, celebrateNext); celebrateNext = false; }
+    queueCue();
   }
 
   function setSync(t) {
@@ -1118,6 +1120,43 @@
     })(start);
   }
 
+  /* ---------------- scroll cue (arrow that leads down while there is more to see) ---------------- */
+  var cueRaf = 0;
+  function updateCue() {
+    cueRaf = 0;
+    var cue = $("#scrollCue"); if (!cue) return;
+    var left = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    cue.classList.toggle("compact", view !== "home" || window.scrollY > 80);
+    cue.classList.toggle("show", left > 140);
+  }
+  function queueCue() { if (!cueRaf) cueRaf = requestAnimationFrame(updateCue); }
+  function cueJump() {
+    var vh = window.innerHeight, y = window.scrollY;
+    var viewEl = $(VIEWS[view]);
+    // jump to the next block that starts below the middle of the screen, at most about one screen
+    var blocks = viewEl ? viewEl.querySelectorAll(":scope > *, .step:not([hidden]) > *") : [];
+    var target = null;
+    for (var i = 0; i < blocks.length; i++) {
+      if (!blocks[i].offsetHeight) continue;
+      var top = blocks[i].getBoundingClientRect().top;
+      if (top > vh * 0.55) { target = top; break; }
+    }
+    var dist = target == null ? vh * 0.7 : Math.min(target - 76, vh - 150);
+    if (dist < vh * 0.3) dist = vh * 0.6;
+    window.scrollTo({ top: y + dist, behavior: REDUCED ? "auto" : "smooth" });
+  }
+  function bindCue() {
+    var cue = $("#scrollCue"); if (!cue) return;
+    cue.addEventListener("click", cueJump);
+    window.addEventListener("scroll", queueCue, { passive: true });
+    window.addEventListener("resize", queueCue);
+    if (window.ResizeObserver) new ResizeObserver(queueCue).observe(document.body);
+    // hide while typing (keyboard open) so it never covers a field
+    document.addEventListener("focusin", function (e) { if (e.target.matches("input, select, textarea")) cue.classList.add("mute"); });
+    document.addEventListener("focusout", function () { cue.classList.remove("mute"); });
+    queueCue();
+  }
+
   /* ---------------- boot ---------------- */
   function boot() {
     $$("[data-logo]").forEach(function (el, i) { el.dataset.uid = String(i); });
@@ -1125,6 +1164,7 @@
     fillProvinces();
     bindForm();
     bindTilt();
+    bindCue();
     var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { $$("canvas[data-done]").forEach(function (c) { delete c.dataset.done; }); if (view === "home") paintBackgrounds(); }, 200); });
 
     if (tickCountdown()) { var iv = setInterval(function () { if (!tickCountdown()) clearInterval(iv); }, 1000); }

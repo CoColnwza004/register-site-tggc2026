@@ -542,6 +542,36 @@ select.input:invalid { color: var(--dim); }
 .tv-actions { margin-top: 12px; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 12px; }
 .linkish { background: none; border: 0; color: var(--navy); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 14px; font-weight: 500; padding: 10px; }
 
+/* ---------- scroll cue: "more below" arrow, shown on every page while content continues ---------- */
+.scroll-cue {
+  position: fixed; left: 50%;
+  bottom: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 44;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 12px 0 16px;
+  border: 1px solid rgba(7, 95, 152, 0.16); border-radius: 999px;
+  background: rgba(252, 253, 253, 0.88);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+  box-shadow: 0 8px 24px rgba(4, 50, 79, 0.16);
+  color: var(--navy);
+  font-family: var(--f-display); font-weight: 500; font-size: 14px;
+  cursor: pointer;
+  opacity: 0; transform: translate(-50%, 12px); pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  -webkit-tap-highlight-color: transparent;
+}
+.scroll-cue.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.scroll-cue.show:active { transform: translate(-50%, 0) scale(0.95); }
+.scroll-cue svg { width: 20px; height: 20px; animation: cueBob 1.6s ease-in-out infinite; }
+.scroll-cue svg .c2 { opacity: 0.4; }
+@keyframes cueBob { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
+/* compact: small round arrow at the right edge, so it never sits on top of fields or chips */
+.scroll-cue.compact { left: auto; right: max(16px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; padding: 0; justify-content: center; transform: translateY(12px); }
+.scroll-cue.compact.show { transform: none; }
+.scroll-cue.compact.show:active { transform: scale(0.92); }
+.scroll-cue.compact span { display: none; }
+.scroll-cue.show.mute { opacity: 0; pointer-events: none; }
+
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px) + 12px);
   transform: translate(-50%, 20px);
@@ -567,6 +597,7 @@ select.input:invalid { color: var(--dim); }
 
 @media (min-width: 560px) { .rail { grid-auto-columns: 60%; } }
 @media (prefers-reduced-motion: reduce) {
+  .scroll-cue svg { animation: none; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   html { scroll-behavior: auto; }
 }
