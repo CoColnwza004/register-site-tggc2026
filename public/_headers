@@ -1,0 +1,9 @@
+# Cloudflare Pages headers
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/staff/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache
+  Permissions-Policy: camera=(self)

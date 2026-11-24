@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#04324f">
+<title>จุดแลกของที่ระลึก · เจ้าหน้าที่ TGGC 2569</title>
+<link rel="icon" type="image/png" href="/assets/logo-mark.png">
+<link rel="apple-touch-icon" href="/assets/logo-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/staff/staff.css">
+</head>
+<body>
+
+<!-- ============ login ============ -->
+<main class="login" id="loginView">
+  <div class="login-card">
+    <img class="login-logo" src="/assets/logo-mark.png" alt="TGGC 2026">
+    <span class="staff-tag">สำหรับเจ้าหน้าที่เท่านั้น</span>
+    <h1>จุดแลกของที่ระลึก</h1>
+    <p class="login-sub">สแกนบัตรผู้เข้าร่วม แล้วบันทึกการรับของเข้า Google Sheet ทันที</p>
+    <form id="loginForm" autocomplete="off" novalidate>
+      <label class="fl" for="station">ชื่อจุด / ผู้ปฏิบัติงาน</label>
+      <input class="in" id="station" maxlength="40" placeholder="เช่น จุด 1 · ครูสมชาย" enterkeyhint="next">
+      <label class="fl" for="pin">PIN เจ้าหน้าที่</label>
+      <input class="in pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="••••••" enterkeyhint="go" autocomplete="off">
+      <p class="err" id="loginErr" hidden></p>
+      <button class="btn" id="loginBtn" type="submit">เข้าสู่ระบบ</button>
+    </form>
+    <p class="login-foot">อาคาร 100 ปี ชูชาติอนุสรณ์ ชั้น 1 · โรงเรียนชลประทานวิทยา</p>
+  </div>
+</main>
+
+<!-- ============ app ============ -->
+<main class="app" id="appView" hidden>
+  <header class="top">
+    <img src="/assets/logo-mark.png" alt="" class="top-logo">
+    <div class="top-txt"><b>จุดแลกของที่ระลึก</b><span id="stationTxt">—</span></div>
+    <button class="icon-btn" id="logoutBtn" type="button" aria-label="ออกจากระบบ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>
+    </button>
+  </header>
+
+  <section class="stats" aria-live="polite">
+    <div class="stats-num"><b id="statGot">–</b><span>/ <i id="statTotal">–</i> คน</span></div>
+    <div class="stats-lbl">มอบของที่ระลึกแล้ว <em id="statPct"></em></div>
+    <div class="bar"><i id="statBar"></i></div>
+  </section>
+
+  <section class="scanner" id="scanner">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b class="laser"></b></div>
+    <div class="cam-msg" id="camMsg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
+      <b id="camTitle">แตะเพื่อเปิดกล้องสแกน QR</b>
+      <span id="camSub">เล็ง QR บนบัตรให้อยู่ในกรอบ</span>
+    </div>
+    <span class="scan-hint" id="scanHint" hidden>เล็ง QR บนบัตรให้อยู่ในกรอบ</span>
+  </section>
+
+  <div class="row-ctl">
+    <label class="switch"><input type="checkbox" id="autoRedeem"><span class="sw"></span><span>มอบทันทีเมื่อสแกนเจอ</span></label>
+    <button class="chip" id="camBtn" type="button">ปิดกล้อง</button>
+  </div>
+
+  <form class="search" id="searchForm" autocomplete="off">
+    <input class="in" id="q" placeholder="พิมพ์รหัสบัตร / เบอร์โทร / ชื่อ" enterkeyhint="search">
+    <button class="btn small" type="submit" aria-label="ค้นหา">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    </button>
+  </form>
+
+  <section class="log">
+    <h2>ล่าสุดบนเครื่องนี้</h2>
+    <ol id="logList"><li class="empty">ยังไม่มีรายการ</li></ol>
+  </section>
+</main>
+
+<!-- ============ result sheet ============ -->
+<div class="sheet-wrap" id="sheetWrap" hidden>
+  <div class="backdrop" id="backdrop"></div>
+  <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sh-status" id="shStatus"><span class="sh-ico" id="shIco"></span><b id="shTitle"></b></div>
+    <div id="shBody"></div>
+    <div class="sh-actions" id="shActions"></div>
+    <i class="sh-timer" id="shTimer" hidden></i>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/config.js"></script>
+<script src="/staff/staff.js"></script>
+</body>
+</html>

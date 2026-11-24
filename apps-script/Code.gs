@@ -13,6 +13,8 @@
  * อัปเดตโค้ดนี้ทับของเดิม: วางทับ → บันทึก → รีเฟรชหน้า Sheet จะเห็นเมนู "TGGC 2569"
  * (เมนูรีเซ็ตไม่ต้อง Deploy ใหม่ · ถ้าแก้ doPost ต้องไปที่ Deploy → Manage deployments → Edit → New version)
  *
+ * หน้าเจ้าหน้าที่ (สแกนบัตร/มอบของที่ระลึก) อยู่ที่ <เว็บ>/staff/ ใช้ PIN ที่ตั้งจากเมนู "TGGC 2569 → ตั้ง/ดู PIN เจ้าหน้าที่"
+ *
  * คอลัมน์ในแท็บ "ลงทะเบียน":
  *  A ลำดับ | B รหัสบัตร | C วันเวลาลงทะเบียน | D คำนำหน้า | E ชื่อ | F นามสกุล | G ตำแหน่ง
  *  H โรงเรียน | I จังหวัด | J สังกัด | K เบอร์โทร | L รับของที่ระลึก (☑) | M เวลารับของ | N หมายเหตุ
@@ -25,6 +27,7 @@ var COL = { NO: 1, ID: 2, TIME: 3, PREFIX: 4, FIRST: 5, LAST: 6, POSITION: 7, SC
 function doPost(e) {
   try {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (body.action) return staff_(body);          // หน้าเจ้าหน้าที่ /staff (ต้องมี PIN)
     if (body.website) return json_({ ok: true }); // honeypot: bots fill hidden fields
 
     var d = {
@@ -100,7 +103,121 @@ function onOpen() {
     .createMenu('TGGC 2569')
     .addItem('รีเซ็ตข้อมูลลงทะเบียน (หลังทดสอบ)…', 'resetRegistrations')
     .addItem('ล้างช่องค้นหาบัตร', 'clearLookup')
+    .addSeparator()
+    .addItem('ตั้ง/ดู PIN เจ้าหน้าที่ (หน้าสแกนบัตร)…', 'setStaffPin')
     .addToUi();
+}
+
+/* ---------------- หน้าเจ้าหน้าที่: สแกนบัตร → มอบของที่ระลึก ---------------- */
+var STAFF_ACTIONS = { login: 1, lookup: 1, redeem: 1, undo: 1, stats: 1 };
+
+/** เมนู: ตั้ง PIN ใหม่ (เว้นว่าง = สุ่ม 6 หลักให้) · ตั้งใหม่แล้ว PIN เดิมใช้ไม่ได้ทันที และปลดล็อกกรณีใส่ผิดหลายครั้ง */
+function setStaffPin() {
+  var ui = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+  var cur = props.getProperty('STAFF_PIN');
+  var res = ui.prompt('PIN เจ้าหน้าที่ (หน้าสแกนบัตร)',
+    (cur ? 'PIN ปัจจุบัน: ' + cur + '\n\n' : 'ยังไม่ได้ตั้ง PIN\n\n') +
+    'พิมพ์ PIN ใหม่ (ตัวเลข 6–12 หลัก) หรือเว้นว่างแล้วกด OK เพื่อสุ่มให้\nกด Cancel ถ้าไม่ต้องการเปลี่ยน',
+    ui.ButtonSet.OK_CANCEL);
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+  var pin = res.getResponseText().replace(/\s/g, '');
+  if (!pin) { pin = ''; for (var i = 0; i < 6; i++) pin += Math.floor(Math.random() * 10); }
+  if (!/^\d{6,12}$/.test(pin)) { ui.alert('PIN ต้องเป็นตัวเลข 6–12 หลัก ยังไม่ได้เปลี่ยน'); return; }
+  props.setProperty('STAFF_PIN', pin);
+  CacheService.getScriptCache().remove('pinFails');
+  ui.alert('ตั้ง PIN เรียบร้อย', 'PIN เจ้าหน้าที่: ' + pin + '\n\nแจ้ง PIN นี้เฉพาะเจ้าหน้าที่จุดแลกของที่ระลึกเท่านั้น', ui.ButtonSet.OK);
+}
+
+function staff_(b) {
+  if (!STAFF_ACTIONS[b.action]) return json_({ ok: false, error: 'คำสั่งไม่ถูกต้อง' });
+  var pinErr = checkPin_(b.pin);
+  if (pinErr) return json_({ ok: false, auth: false, error: pinErr });
+  var station = clean_(b.station, 40).replace(/^'/, '') || 'จุดแลกของที่ระลึก';
+  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
+
+  if (b.action === 'login' || b.action === 'stats') return json_({ ok: true, stats: stats_(readRows_(sh)) });
+
+  if (b.action === 'lookup') {
+    var rows = readRows_(sh), q = String(b.q || '').trim(), out = [];
+    var id = ticketId_(q), digits = q.replace(/\D/g, '');
+    rows.forEach(function (x, i) {
+      if (out.length >= 8) return;
+      var hit = id ? String(x[COL.ID - 1]) === id
+        : digits.length >= 9 ? String(x[COL.PHONE - 1]).replace(/\D/g, '') === digits
+        : q.length >= 2 && (x[COL.FIRST - 1] + ' ' + x[COL.LAST - 1]).toLowerCase().indexOf(q.toLowerCase()) >= 0;
+      if (hit) out.push(rec_(x));
+    });
+    return json_({ ok: true, results: out, stats: stats_(rows) });
+  }
+
+  // redeem / undo: lock so two scanners can never hand out twice for the same ticket
+  var tid = ticketId_(b.id);
+  if (!tid) return json_({ ok: false, error: 'รหัสบัตรไม่ถูกต้อง' });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var all = readRows_(sh), at = -1;
+    for (var k = 0; k < all.length; k++) if (String(all[k][COL.ID - 1]) === tid) { at = k; break; }
+    if (at < 0) return json_({ ok: true, found: false });
+    var r = at + 2, row = all[at], now = new Date();
+    var stamp = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM HH:mm');
+    if (b.action === 'redeem') {
+      if (row[COL.GOT - 1] === true) return json_({ ok: true, found: true, already: true, rec: rec_(row), stats: stats_(all) });
+      sh.getRange(r, COL.GOT, 1, 2).setValues([[true, now]]);
+      sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'รับของ: ' + station + ' ' + stamp));
+      row[COL.GOT - 1] = true; row[COL.GOT_AT - 1] = now;
+      return json_({ ok: true, found: true, redeemed: true, rec: rec_(row), stats: stats_(all) });
+    }
+    // undo (staff tapped by mistake)
+    sh.getRange(r, COL.GOT, 1, 2).setValues([[false, '']]);
+    sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'ยกเลิกการรับ: ' + station + ' ' + stamp));
+    row[COL.GOT - 1] = false; row[COL.GOT_AT - 1] = '';
+    return json_({ ok: true, found: true, undone: true, rec: rec_(row), stats: stats_(all) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// global brake on wrong PINs: 20 wrong tries → locked 15 min (setting a new PIN unlocks)
+function checkPin_(pin) {
+  var real = PropertiesService.getScriptProperties().getProperty('STAFF_PIN');
+  if (!real) return 'ยังไม่ได้ตั้ง PIN เจ้าหน้าที่ (ใน Google Sheet: เมนู TGGC 2569 → ตั้ง/ดู PIN เจ้าหน้าที่)';
+  var cache = CacheService.getScriptCache();
+  var fails = Number(cache.get('pinFails') || 0);
+  if (fails >= 20) return 'ใส่ PIN ผิดหลายครั้งเกินไป ระบบล็อกชั่วคราว 15 นาที (หรือตั้ง PIN ใหม่ในเมนู Sheet เพื่อปลดล็อก)';
+  if (String(pin || '') !== real) { cache.put('pinFails', String(fails + 1), 900); return 'PIN ไม่ถูกต้อง'; }
+  return '';
+}
+
+function readRows_(sh) {
+  var last = sh.getLastRow();
+  return last >= 2 ? sh.getRange(2, 1, last - 1, NCOL).getValues().filter(function (x) { return x[COL.ID - 1]; }) : [];
+}
+function stats_(rows) {
+  var got = 0;
+  rows.forEach(function (x) { if (x[COL.GOT - 1] === true) got++; });
+  return { total: rows.length, got: got };
+}
+function ticketId_(s) {
+  var m = String(s || '').toUpperCase().match(/TG-?([2-9A-HJ-NP-Z]{5})/);
+  return m ? 'TG-' + m[1] : '';
+}
+function rec_(x) {
+  var at = x[COL.GOT_AT - 1];
+  return {
+    id: x[COL.ID - 1], no: x[COL.NO - 1],
+    prefix: x[COL.PREFIX - 1], first: x[COL.FIRST - 1], last: x[COL.LAST - 1],
+    position: x[COL.POSITION - 1], school: x[COL.SCHOOL - 1], province: x[COL.PROVINCE - 1],
+    affiliation: x[COL.AFF - 1], phone4: String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4),
+    got: x[COL.GOT - 1] === true,
+    gotAt: at instanceof Date ? Utilities.formatDate(at, 'Asia/Bangkok', 'HH:mm น. · dd/MM/yyyy') : '',
+    note: String(x[COL.NOTE - 1] || '')
+  };
+}
+function addNote_(old, line) {
+  old = String(old || '');
+  return (old ? old + ' | ' : '') + line;
 }
 
 /**
