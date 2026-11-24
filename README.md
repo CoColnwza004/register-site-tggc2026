@@ -44,6 +44,12 @@ Sheet: แท็บ **สรุป** (ยอดรวม/แยกตามต�
 
 ## Deploy (Cloudflare Pages)
 
+เว็บจริง: **https://tggc2569-register.pages.dev** · หน้าเจ้าหน้าที่ **https://tggc2569-register.pages.dev/staff/**
+
 ```bash
-npx wrangler pages deploy public --project-name tggc2569-register
+node scripts/build-worker.mjs
+npx wrangler pages deploy dist --project-name tggc2569-register --branch main
 ```
+
+`build-worker.mjs` รวมทุกไฟล์ใน `public/` เป็น `dist/_worker.js` ไฟล์เดียว (Pages advanced mode) ถ้า wrangler ติดขั้นอัปโหลดไฟล์
+(`/pages/assets/check-missing` Authorization failed) ให้ส่ง `_worker.bundle` เข้า API `.../pages/projects/<name>/deployments` ตรง ๆ แทน
