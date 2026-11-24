@@ -154,10 +154,12 @@
   function paintBackgrounds() {
     var hero = $("#topo");
     if (hero) paintCanvas(hero, {
-      seed: 1969, levels: 18, scale: 0.0045, minorAlpha: 0.45,
-      color: function (p) { return p < 0.5 ? "rgba(167,213,219,0.42)" : "rgba(44,195,148,0.5)"; },
-      bias: function (x, y) { return -0.25 * ((x - 0.85) * (x - 0.85) + (y - 0.2) * (y - 0.2)); },
+      seed: 1969, levels: 16, scale: 0.0045, minorAlpha: 0.5,
+      color: function (p) { return p < 0.5 ? "rgba(10,152,199,0.20)" : "rgba(44,195,148,0.26)"; },
+      bias: function (x, y) { return -0.3 * ((x - 0.15) * (x - 0.15) + (y - 0.85) * (y - 0.85)); },
     });
+    var bg = $("#bgTopo");
+    if (bg) paintCanvas(bg, { seed: 77, levels: 14, scale: 0.0028, cell: 12, minorAlpha: 0.5, color: "rgba(7,95,152,0.07)" });
     $$("canvas[data-topo]").forEach(function (cv) {
       paintCanvas(cv, { seed: 300 + Number(cv.dataset.topo) * 37, levels: 12, scale: 0.012, cell: 6, minorAlpha: 0.6, color: "rgba(255,255,255,0.32)" });
     });
@@ -686,14 +688,91 @@
     c.restore();
   }
 
+  /* ---- 24 designs: 6 colour themes × 4 GIS patterns, picked from the ticket id ---- */
+  var THEMES = [
+    { key: "OCEAN", th: "มหาสมุทร", bg: ["#0a7fb5", "#075f98", "#032d4b"], glowA: "44,195,148", glowB: "10,152,199", line: "167,213,219", line2: "44,195,148",
+      fg: "#ffffff", soft: "rgba(220,240,244,0.9)", label: "rgba(167,213,219,0.92)", accent: "#2cc394", pill: ["#2cc394", "#148e64"], band: ["#2cc394", "#15a8a0", "#0a98c7"], bandText: "#ffffff", stub: "#064c78", stubText: "#a7d5db" },
+    { key: "EMERALD", th: "มรกต", bg: ["#1aa67d", "#0f6e55", "#053528"], glowA: "167,213,219", glowB: "44,195,148", line: "200,240,226", line2: "167,213,219",
+      fg: "#ffffff", soft: "rgba(225,245,238,0.9)", label: "rgba(200,240,226,0.9)", accent: "#a7d5db", pill: ["#0a98c7", "#075f98"], band: ["#fcfdfd", "#a7d5db"], bandText: "#0b5a42", stub: "#0b5040", stubText: "#c8efe3" },
+    { key: "LAGOON", th: "ลากูน", bg: ["#1bb5a8", "#0a8aa8", "#065a80"], glowA: "252,253,253", glowB: "44,195,148", line: "233,251,255", line2: "167,213,219",
+      fg: "#ffffff", soft: "rgba(236,250,252,0.92)", label: "rgba(225,247,250,0.9)", accent: "#e3fbf3", pill: ["#075f98", "#043a5e"], band: ["#075f98", "#0a98c7"], bandText: "#ffffff", stub: "#08617e", stubText: "#e3fbf3" },
+    { key: "MIDNIGHT", th: "ราตรี", bg: ["#0b3a5e", "#052640", "#021627"], glowA: "44,195,148", glowB: "10,152,199", line: "167,213,219", line2: "44,195,148",
+      fg: "#ffffff", soft: "rgba(214,236,242,0.88)", label: "rgba(167,213,219,0.88)", accent: "#2cc394", pill: ["#0a98c7", "#075f98"], band: ["#2cc394", "#0a98c7"], bandText: "#ffffff", stub: "#06304d", stubText: "#a7d5db" },
+    { key: "PEARL", th: "ไข่มุก", light: true, bg: ["#ffffff", "#eef8f9", "#cfe8ec"], glowA: "44,195,148", glowB: "10,152,199", line: "7,95,152", line2: "20,142,100",
+      fg: "#063f66", soft: "#2d6b80", label: "#4f8f94", accent: "#148e64", pill: ["#075f98", "#0a98c7"], band: ["#075f98", "#0a98c7", "#15a8a0"], bandText: "#ffffff", stub: "#e2f2f4", stubText: "#075f98", ground: ["#0a6c9e", "#043a5e"] },
+    { key: "SEAGLASS", th: "แก้วทะเล", bg: ["#6fb3b6", "#3a8c98", "#11506a"], glowA: "252,253,253", glowB: "44,195,148", line: "233,251,255", line2: "167,213,219",
+      fg: "#ffffff", soft: "rgba(236,250,252,0.92)", label: "rgba(225,247,250,0.9)", accent: "#d6f7ec", pill: ["#2cc394", "#148e64"], band: ["#fcfdfd", "#a7d5db"], bandText: "#11506a", stub: "#1f6577", stubText: "#e3fbf3" },
+  ];
+  var MOTIFS = [
+    { key: "CONTOUR", th: "เส้นชั้นความสูง" },
+    { key: "GRATICULE", th: "เส้นกริดโลก" },
+    { key: "HEXBIN", th: "หกเหลี่ยม GIS" },
+    { key: "RASTER", th: "ภาพราสเตอร์" },
+  ];
+  function hashStr(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function designOf(t, force) {
+    var h = hashStr(String(t.id || ""));
+    var ti = force ? force[0] : h % THEMES.length, mi = force ? force[1] : (h >>> 8) % MOTIFS.length;
+    return { T: THEMES[ti], M: MOTIFS[mi], n: ti * MOTIFS.length + mi + 1, seed: (h >>> 3) || 7 };
+  }
+  function rgba(rgb, a) { return "rgba(" + rgb + "," + a + ")"; }
+
+  function motifGraticule(c, T, seed) {
+    var cx = W - 120 - (seed % 140), cy = 800 + (seed % 220), R = 440, la = T.light ? 0.16 : 0.24;
+    c.save(); c.translate(cx, cy); c.rotate(-0.35 - (seed % 7) * 0.04);
+    c.strokeStyle = rgba(T.line, la); c.lineWidth = 1.6;
+    c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.stroke();
+    for (var k = 1; k < 6; k++) { var rx = R * Math.sin(k * Math.PI / 12); c.beginPath(); c.ellipse(0, 0, rx, R, 0, 0, Math.PI * 2); c.stroke(); }
+    c.beginPath(); c.moveTo(0, -R); c.lineTo(0, R); c.stroke();
+    for (var lat = -75; lat <= 75; lat += 15) {
+      var y = R * Math.sin(lat * Math.PI / 180), hw = R * Math.cos(lat * Math.PI / 180);
+      c.beginPath(); c.ellipse(0, y, hw, hw * 0.16, 0, 0, Math.PI); c.stroke();
+    }
+    c.strokeStyle = rgba(T.line2, la + 0.08); c.lineWidth = 2.4;
+    c.beginPath(); c.ellipse(0, 0, R * 1.3, R * 0.32, 0.35, 0, Math.PI * 2); c.stroke();
+    c.restore();
+    drawTopo(c, W, H, { seed: seed, levels: 10, cell: 14, scale: 0.0026, minorAlpha: 0.5, lineWidth: 1.2, color: rgba(T.line, T.light ? 0.06 : 0.09) });
+  }
+  function motifHex(c, T, seed) {
+    var nz = makeNoise(seed), sz = 30, hstep = sz * 1.5, vstep = Math.sqrt(3) * sz;
+    c.save(); c.lineWidth = 1.2;
+    for (var col = 0; col * hstep < W + sz; col++) {
+      for (var row = 0; row * vstep < H + sz; row++) {
+        var cx = col * hstep, cy = row * vstep + (col % 2 ? vstep / 2 : 0);
+        var v = nz(cx * 0.0035, cy * 0.0035);
+        c.beginPath();
+        for (var k = 0; k < 6; k++) { var a = k * Math.PI / 3; var x = cx + (sz - 2) * Math.cos(a), y = cy + (sz - 2) * Math.sin(a); if (k) c.lineTo(x, y); else c.moveTo(x, y); }
+        c.closePath();
+        if (v > 0.56) { c.fillStyle = rgba(T.line2, Math.min(0.3, (v - 0.56) * (T.light ? 0.9 : 1.3))); c.fill(); }
+        c.strokeStyle = rgba(T.line, T.light ? 0.09 : 0.13); c.stroke();
+      }
+    }
+    c.restore();
+  }
+  function motifRaster(c, T, seed) {
+    var nz = makeNoise(seed), st = 20;
+    c.save(); c.fillStyle = rgba(T.line, T.light ? 0.16 : 0.22);
+    for (var y = st / 2; y < H; y += st) for (var x = st / 2; x < W; x += st) {
+      var v = nz(x * 0.003, y * 0.003), r = 0.6 + 7.4 * Math.pow(Math.max(0, v - 0.25) / 0.75, 1.8);
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+  }
+
   function renderTicket(t, opt) {
     opt = opt || {};
+    var D = designOf(t, opt.design), T = D.T, seed = D.seed;
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d");
 
     // page ground
+    var gr = T.ground || ["#e6f4f6", "#a7d5db"];
     var g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, "#e6f4f6"); g.addColorStop(1, "#a7d5db");
+    g.addColorStop(0, gr[0]); g.addColorStop(1, gr[1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
     // card on its own layer so the perforation notches can be punched through
@@ -702,29 +781,32 @@
     var c = card.getContext("2d");
     rr(c, M, M, CW, CH, 56); c.save(); c.clip();
     var cg = c.createLinearGradient(0, M, 0, H - M);
-    cg.addColorStop(0, "#0a7fb5"); cg.addColorStop(0.42, "#075f98"); cg.addColorStop(1, "#032d4b");
+    cg.addColorStop(0, T.bg[0]); cg.addColorStop(0.42, T.bg[1]); cg.addColorStop(1, T.bg[2]);
     c.fillStyle = cg; c.fillRect(0, 0, W, H);
     var glow = c.createRadialGradient(W * 0.9, 240, 10, W * 0.9, 240, 620);
-    glow.addColorStop(0, "rgba(44,195,148,0.42)"); glow.addColorStop(1, "rgba(44,195,148,0)");
+    glow.addColorStop(0, rgba(T.glowA, T.light ? 0.22 : 0.42)); glow.addColorStop(1, rgba(T.glowA, 0));
     c.fillStyle = glow; c.fillRect(0, 0, W, H);
     var glow2 = c.createRadialGradient(120, PERF + 300, 10, 120, PERF + 300, 640);
-    glow2.addColorStop(0, "rgba(10,152,199,0.4)"); glow2.addColorStop(1, "rgba(10,152,199,0)");
+    glow2.addColorStop(0, rgba(T.glowB, T.light ? 0.2 : 0.4)); glow2.addColorStop(1, rgba(T.glowB, 0));
     c.fillStyle = glow2; c.fillRect(0, 0, W, H);
-    drawTopo(c, W, H, { seed: 2569, levels: 22, cell: 12, scale: 0.0032, minorAlpha: 0.5, lineWidth: 1.4,
-      color: function (p) { return p < 0.5 ? "rgba(167,213,219,0.16)" : "rgba(44,195,148,0.2)"; } });
-    // guilloche rosette behind the attendee block, with the logo as a watermark at its heart
-    var gx = W - 170, gy = 930;
-    guilloche(c, gx, gy, 300, 18, 26, 7, "rgba(167,213,219,0.13)", 1.2);
-    guilloche(c, gx, gy, 220, 24, 18, 12, "rgba(167,213,219,0.18)", 1.2);
-    guilloche(c, gx, gy, 140, 16, 14, 10, "rgba(44,195,148,0.24)", 1.2);
-    if (logoImg) { c.save(); c.globalAlpha = 0.12; c.drawImage(logoImg, gx - 95, gy - 95, 190, 190); c.restore(); }
-    // security wave band under the event title
-    waveBand(c, M, W - M, 642, 12, 3.2, 14, 0.011, "rgba(167,213,219,0.22)", 1.1);
-    // stub rosette
-    guilloche(c, 220, PERF + 420, 230, 14, 20, 8, "rgba(167,213,219,0.10)", 1.1);
-    // gloss
+
+    // the GIS pattern — its geometry comes from the ticket id, so no two tickets match
+    var la = T.light ? 0.13 : 0.17;
+    if (D.M.key === "CONTOUR") drawTopo(c, W, H, { seed: seed, levels: 22, cell: 12, scale: 0.0032, minorAlpha: 0.5, lineWidth: 1.4, color: function (q) { return q < 0.5 ? rgba(T.line, la) : rgba(T.line2, la + 0.04); } });
+    else if (D.M.key === "GRATICULE") motifGraticule(c, T, seed);
+    else if (D.M.key === "HEXBIN") motifHex(c, T, seed);
+    else motifRaster(c, T, seed);
+
+    // guilloche rosette with the logo watermark
+    var gx = W - 170, gy = 930, gk = seed % 5;
+    guilloche(c, gx, gy, 300, 18, 24 + gk * 2, 7, rgba(T.line, T.light ? 0.10 : 0.13), 1.2);
+    guilloche(c, gx, gy, 220, 24, 16 + gk * 2, 12, rgba(T.line, T.light ? 0.14 : 0.18), 1.2);
+    guilloche(c, gx, gy, 140, 16, 12 + gk, 10, rgba(T.line2, T.light ? 0.2 : 0.24), 1.2);
+    if (logoImg) { c.save(); c.globalAlpha = T.light ? 0.08 : 0.12; c.drawImage(logoImg, gx - 95, gy - 95, 190, 190); c.restore(); }
+    waveBand(c, M, W - M, 642, 12, 3.2, 14, 0.011, rgba(T.line, T.light ? 0.16 : 0.22), 1.1);
+    guilloche(c, 220, PERF + 420, 230, 14, 20, 8, rgba(T.line, T.light ? 0.08 : 0.10), 1.1);
     var gl = c.createLinearGradient(0, 0, W * 0.65, H * 0.4);
-    gl.addColorStop(0, "rgba(255,255,255,0.13)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+    gl.addColorStop(0, "rgba(255,255,255," + (T.light ? 0.5 : 0.13) + ")"); gl.addColorStop(1, "rgba(255,255,255,0)");
     c.fillStyle = gl; c.fillRect(0, 0, W, H);
     c.restore();
 
@@ -732,18 +814,16 @@
     var mf = c.createLinearGradient(0, 0, W, H);
     ["#a7d5db", "#ffffff", "#2cc394", "#0a98c7", "#ffffff", "#5ba1a5", "#a7d5db"].forEach(function (col, i, a) { mf.addColorStop(i / (a.length - 1), col); });
     rr(c, M + 3, M + 3, CW - 6, CH - 6, 53); c.strokeStyle = mf; c.lineWidth = 6; c.stroke();
-    rr(c, M + 20, M + 20, CW - 40, CH - 40, 38); c.strokeStyle = "rgba(167,213,219,0.35)"; c.lineWidth = 1.5; c.stroke();
-    c.strokeStyle = "rgba(44,195,148,0.9)"; c.lineWidth = 3; c.lineCap = "round";
+    rr(c, M + 20, M + 20, CW - 40, CH - 40, 38); c.strokeStyle = rgba(T.line, T.light ? 0.3 : 0.35); c.lineWidth = 1.5; c.stroke();
+    c.strokeStyle = T.light ? "rgba(20,142,100,0.9)" : "rgba(44,195,148,0.9)"; c.lineWidth = 3; c.lineCap = "round";
     [[M + 34, M + 34, 1, 1], [W - M - 34, M + 34, -1, 1], [M + 34, H - M - 34, 1, -1], [W - M - 34, H - M - 34, -1, -1]].forEach(function (q) {
       c.beginPath(); c.moveTo(q[0], q[1] + 26 * q[3]); c.lineTo(q[0], q[1]); c.lineTo(q[0] + 26 * q[2], q[1]); c.stroke();
     });
-    // notches
     c.globalCompositeOperation = "destination-out";
     [M, W - M].forEach(function (x) { c.beginPath(); c.arc(x, PERF, 38, 0, Math.PI * 2); c.fill(); });
     c.globalCompositeOperation = "source-over";
     [M, W - M].forEach(function (x, i) { c.beginPath(); c.arc(x, PERF, 41, i ? Math.PI / 2 : -Math.PI / 2, i ? Math.PI * 1.5 : Math.PI / 2); c.strokeStyle = mf; c.lineWidth = 4; c.stroke(); });
-    // perforation
-    c.save(); c.setLineDash([14, 12]); c.strokeStyle = "rgba(233,251,255,0.35)"; c.lineWidth = 3;
+    c.save(); c.setLineDash([14, 12]); c.strokeStyle = T.light ? "rgba(7,95,152,0.35)" : "rgba(233,251,255,0.35)"; c.lineWidth = 3;
     c.beginPath(); c.moveTo(M + 60, PERF); c.lineTo(W - M - 60, PERF); c.stroke(); c.restore();
     ctx.shadowColor = "rgba(4,50,79,0.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
     ctx.drawImage(card, 0, 0);
@@ -752,46 +832,46 @@
     var X = 128, CWID = W - X * 2;
     ctx.textBaseline = "alphabetic";
 
-    // header: logo tile + wordmark + holographic seal
+    // header
     rr(ctx, 124, 116, 108, 108, 30); ctx.fillStyle = "#fcfdfd"; ctx.fill();
+    if (T.light) { ctx.strokeStyle = "rgba(7,95,152,0.18)"; ctx.lineWidth = 2; ctx.stroke(); }
     if (logoImg) ctx.drawImage(logoImg, 130, 122, 96, 96);
-    font(ctx, 700, 44, F_MONO); ctx.fillStyle = "#ffffff"; ctx.fillText("TGGC", 256, 166);
-    var tw = ctx.measureText("TGGC ").width; ctx.fillStyle = "#2cc394"; ctx.fillText("2026", 256 + tw, 166);
-    ctx.fillStyle = "#a7d5db"; font(ctx, 600, 23, F_BODY); ctx.fillText("บัตรเข้าร่วมงาน · OFFICIAL PASS", 256, 204);
+    font(ctx, 700, 44, F_MONO); ctx.fillStyle = T.light ? "#075f98" : "#ffffff"; ctx.fillText("TGGC", 256, 166);
+    var tw = ctx.measureText("TGGC ").width; ctx.fillStyle = T.light ? "#148e64" : T.accent; ctx.fillText("2026", 256 + tw, 166);
+    ctx.fillStyle = T.label; font(ctx, 600, 23, F_BODY); ctx.fillText("บัตรเข้าร่วมงาน · OFFICIAL PASS", 256, 204);
     holoSeal(ctx, W - X - 66, 174, 84);
 
     // title
     var y = 300;
     var TL = ["การแข่งขันอัจฉริยภาพทางด้าน", "ภูมิศาสตร์และภูมิสารสนเทศ", "แห่งประเทศไทย"];
     var ts = fitBlock(ctx, TL, CWID, 52, 38, 600, F_DISPLAY);
-    font(ctx, 600, ts, F_DISPLAY); ctx.fillStyle = "#ffffff";
+    font(ctx, 600, ts, F_DISPLAY); ctx.fillStyle = T.fg;
     TL.forEach(function (l) { ctx.fillText(l, X, y); y += Math.round(ts * 1.3); });
     y += 2;
-    font(ctx, 500, 36, F_DISPLAY); ctx.fillStyle = "#2cc394";
+    font(ctx, 500, 36, F_DISPLAY); ctx.fillStyle = T.accent;
     ctx.fillText("ระดับมัธยมศึกษา ครั้งที่ 3 พ.ศ. 2569", X, y); y += 54;
     var RL = ["ชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า", "กรมสมเด็จพระเทพรัตนราชสุดาฯ สยามบรมราชกุมารี"];
     var rs = fitBlock(ctx, RL, CWID, 27, 20, 400, F_BODY);
-    font(ctx, 400, rs, F_BODY); ctx.fillStyle = "rgba(220,240,244,0.88)";
+    font(ctx, 400, rs, F_BODY); ctx.fillStyle = T.soft;
     RL.forEach(function (l) { ctx.fillText(l, X, y); y += Math.round(rs * 1.45); });
 
     // divider + microtext
     y += 16;
     var dg = ctx.createLinearGradient(X, 0, W - X, 0);
-    dg.addColorStop(0, "rgba(44,195,148,0.95)"); dg.addColorStop(1, "rgba(44,195,148,0)");
+    dg.addColorStop(0, T.accent); dg.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = dg; ctx.fillRect(X, y, CWID, 2);
-    microText(ctx, "TGGC2026·GEOGRAPHY·GEOINFORMATICS·ภูมิศาสตร์·ภูมิสารสนเทศ·ครั้งที่3·", X, y + 22, CWID, 12, "rgba(167,213,219,0.55)");
+    microText(ctx, "TGGC2026·GEOGRAPHY·GEOINFORMATICS·ภูมิศาสตร์·ภูมิสารสนเทศ·ครั้งที่3·", X, y + 22, CWID, 12, rgba(T.line, 0.55));
     y += 64;
 
     // attendee
-    ctx.fillStyle = "#2cc394"; font(ctx, 700, 24, F_MONO); ctx.fillText("ATTENDEE · ผู้เข้าร่วมงาน", X, y);
+    ctx.fillStyle = T.accent; font(ctx, 700, 24, F_MONO); ctx.fillText("ATTENDEE · ผู้เข้าร่วมงาน", X, y);
     y += 18;
-    // one line if it fits large, otherwise break between first name and surname (never inside a name)
     var full = t.prefix + t.first + " " + t.last, NL, ns;
     font(ctx, 700, 74, F_DISPLAY);
     if (ctx.measureText(full).width <= CWID) { NL = [full]; ns = fitBlock(ctx, NL, CWID, 86, 74, 700, F_DISPLAY); }
     else { NL = [t.prefix + t.first, t.last]; ns = fitBlock(ctx, NL, CWID, 80, 40, 700, F_DISPLAY); }
-    font(ctx, 700, ns, F_DISPLAY); ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "rgba(44,195,148,0.45)"; ctx.shadowBlur = 26;
+    font(ctx, 700, ns, F_DISPLAY); ctx.fillStyle = T.fg;
+    if (!T.light) { ctx.shadowColor = rgba(T.line2, 0.45); ctx.shadowBlur = 26; }
     NL.forEach(function (l) { y += Math.round(ns * 1.1); ctx.fillText(l, X, y); });
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
     y += 32;
@@ -801,17 +881,16 @@
     font(ctx, 600, pos.size, F_BODY);
     var ppw = Math.min(CWID, ctx.measureText(pos.lines[0]).width + 52);
     var ppg = ctx.createLinearGradient(X, 0, X + ppw, 0);
-    ppg.addColorStop(0, "#2cc394"); ppg.addColorStop(1, "#148e64");
+    ppg.addColorStop(0, T.pill[0]); ppg.addColorStop(1, T.pill[1]);
     rr(ctx, X, y, ppw, 58, 29); ctx.fillStyle = ppg; ctx.fill();
     ctx.strokeStyle = "rgba(233,251,255,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = "#ffffff"; ctx.fillText(pos.lines[0], X + 26, y + 39);
     y += 58 + 48;
 
-    // school (full width) + province / affiliation (two columns)
     function kv(label, value, x, yy, w, size) {
-      ctx.fillStyle = "rgba(167,213,219,0.9)"; font(ctx, 500, 22, F_BODY); ctx.fillText(label, x, yy);
+      ctx.fillStyle = T.label; font(ctx, 500, 22, F_BODY); ctx.fillText(label, x, yy);
       var f = fit(ctx, value, w, 1, size, 22, 600, F_BODY);
-      font(ctx, 600, f.size, F_BODY); ctx.fillStyle = "#fcfdfd"; ctx.fillText(f.lines[0], x, yy + 44);
+      font(ctx, 600, f.size, F_BODY); ctx.fillStyle = T.fg; ctx.fillText(f.lines[0], x, yy + 44);
     }
     kv("โรงเรียน", schoolName(t.school), X, y, CWID, 34);
     kv("จังหวัด", t.province, X, y + 100, CWID / 2 - 20, 32);
@@ -820,9 +899,9 @@
     // perforation label
     font(ctx, 600, 19, F_BODY);
     var stubTxt = "ส่วนแลกของที่ระลึก · SOUVENIR STUB", stw = ctx.measureText(stubTxt).width + 40;
-    rr(ctx, (W - stw) / 2, PERF - 20, stw, 40, 20); ctx.fillStyle = "#064c78"; ctx.fill();
-    ctx.strokeStyle = "rgba(44,195,148,0.7)"; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = "#a7d5db"; ctx.fillText(stubTxt, (W - stw) / 2 + 20, PERF + 7);
+    rr(ctx, (W - stw) / 2, PERF - 20, stw, 40, 20); ctx.fillStyle = T.stub; ctx.fill();
+    ctx.strokeStyle = T.light ? "rgba(7,95,152,0.35)" : "rgba(44,195,148,0.7)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = T.stubText; ctx.fillText(stubTxt, (W - stw) / 2 + 20, PERF + 7);
 
     // ---------- stub ----------
     var sy = PERF + 66, QR = 316;
@@ -838,37 +917,38 @@
     }
 
     var rx = X + QR + 48, rw = W - X - rx;
-    ctx.fillStyle = "rgba(167,213,219,0.9)"; font(ctx, 600, 20, F_MONO); ctx.fillText("TICKET ID · รหัสบัตร", rx, sy + 26);
+    ctx.fillStyle = T.label; font(ctx, 600, 20, F_MONO); ctx.fillText("TICKET ID · รหัสบัตร", rx, sy + 26);
     var idf = fit(ctx, t.id, rw, 1, 64, 40, 700, F_MONO);
-    font(ctx, 700, idf.size, F_MONO); ctx.fillStyle = "#ffffff"; ctx.fillText(t.id, rx, sy + 92);
-    if (t.no) { ctx.fillStyle = "#2cc394"; font(ctx, 700, 26, F_MONO); ctx.fillText("Nº " + String(t.no).padStart(4, "0"), rx, sy + 132); }
-    ctx.fillStyle = "rgba(167,213,219,0.35)"; ctx.fillRect(rx, sy + 160, rw, 1.5);
-    ctx.fillStyle = "#2cc394"; font(ctx, 600, 32, F_DISPLAY); ctx.fillText("เสาร์ 28 พ.ย. 2569", rx, sy + 210);
+    font(ctx, 700, idf.size, F_MONO); ctx.fillStyle = T.fg; ctx.fillText(t.id, rx, sy + 92);
+    if (t.no) { ctx.fillStyle = T.accent; font(ctx, 700, 26, F_MONO); ctx.fillText("Nº " + String(t.no).padStart(4, "0"), rx, sy + 132); }
+    ctx.fillStyle = rgba(T.line, 0.35); ctx.fillRect(rx, sy + 152, rw, 1.5);
+    ctx.fillStyle = T.label; font(ctx, 600, 18, F_MONO);
+    ctx.fillText("ลาย " + String(D.n).padStart(2, "0") + "/24 · " + T.key + " " + D.M.key, rx, sy + 182);
+    ctx.fillStyle = T.accent; font(ctx, 600, 32, F_DISPLAY); ctx.fillText("เสาร์ 28 พ.ย. 2569", rx, sy + 232);
     var ven = fit(ctx, "โรงเรียนชลประทานวิทยา จังหวัดนนทบุรี", rw, 2, 25, 20, 400, F_BODY);
-    font(ctx, 400, ven.size, F_BODY); ctx.fillStyle = "rgba(232,245,248,0.9)";
-    ven.lines.forEach(function (l, i) { ctx.fillText(l, rx, sy + 250 + i * 36); });
+    font(ctx, 400, ven.size, F_BODY); ctx.fillStyle = T.soft;
+    ven.lines.forEach(function (l, i) { ctx.fillText(l, rx, sy + 270 + i * 34); });
 
-    // meta line
-    ctx.fillStyle = "rgba(167,213,219,0.8)"; font(ctx, 400, 22, F_BODY);
+    ctx.fillStyle = T.label; font(ctx, 400, 22, F_BODY);
     ctx.fillText("ลงทะเบียน " + thDate(t.createdAt) + "  ·  โทร " + maskPhone(t.phone), X, sy + QR + 52);
 
     // redemption band
     var by = H - M - 56 - 100;
     var bg = ctx.createLinearGradient(X, 0, W - X, 0);
-    bg.addColorStop(0, "#2cc394"); bg.addColorStop(0.55, "#15a8a0"); bg.addColorStop(1, "#0a98c7");
+    T.band.forEach(function (col, i, a) { bg.addColorStop(a.length === 1 ? 0 : i / (a.length - 1), col); });
     rr(ctx, X, by, CWID, 100, 50); ctx.fillStyle = bg; ctx.fill();
     var bsh = ctx.createLinearGradient(0, by, 0, by + 100);
     bsh.addColorStop(0, "rgba(255,255,255,0.28)"); bsh.addColorStop(0.5, "rgba(255,255,255,0)");
     ctx.fillStyle = bsh; ctx.fill();
     var band = fit(ctx, "แลกของที่ระลึก · อาคาร 100 ปี ชูชาติอนุสรณ์ ชั้น 1", CWID - 80, 1, 32, 22, 600, F_DISPLAY);
-    font(ctx, 600, band.size, F_DISPLAY); ctx.fillStyle = "#ffffff";
+    font(ctx, 600, band.size, F_DISPLAY); ctx.fillStyle = T.bandText;
     var bw = ctx.measureText(band.lines[0]).width;
     ctx.fillText(band.lines[0], X + (CWID - bw) / 2, by + 50 + band.size * 0.36);
-    microText(ctx, "TGGC2026·OFFICIAL·PASS·", X + 30, H - M - 22, CWID - 60, 11, "rgba(167,213,219,0.45)");
+    microText(ctx, "TGGC2026·OFFICIAL·PASS·", X + 30, H - M - 22, CWID - 60, 11, rgba(T.line, 0.45));
 
     if (opt.sample) {
       ctx.save(); ctx.translate(W / 2, 1000); ctx.rotate(-0.2);
-      rr(ctx, -340, -78, 680, 156, 28); ctx.fillStyle = "rgba(4,50,79,0.55)"; ctx.fill();
+      rr(ctx, -340, -78, 680, 156, 28); ctx.fillStyle = "rgba(4,50,79,0.6)"; ctx.fill();
       ctx.strokeStyle = "rgba(252,253,253,0.9)"; ctx.lineWidth = 8; ctx.stroke();
       font(ctx, 700, 64, F_DISPLAY); ctx.fillStyle = "#ffffff"; ctx.textAlign = "center";
       ctx.fillText("ตัวอย่างบัตร", 0, 24);
@@ -912,6 +992,8 @@
     $(".tv-head").classList.toggle("again", !celebrate);
     $("#tvTitle").textContent = celebrate ? "ออกบัตรสำเร็จ" : "บัตรของคุณ";
     var img = $("#ticketImg"), tilt = $("#ticketTilt");
+    var D = designOf(t);
+    $("#designNote").innerHTML = "ลายบัตรของคุณ: <b>ลายที่ " + D.n + " จาก 24</b> · " + D.T.th + " × " + D.M.th;
     if (celebrate) img.style.visibility = "hidden";
     Promise.all([loadFonts(), loadLogo()]).then(function () {
       currentCanvas = renderTicket(t);
@@ -927,12 +1009,28 @@
 
   var SAMPLE = { id: "TG-S4MPL", no: 1, prefix: "นาย", first: "ภูมิ", last: "สารสนเทศ", position: "ครู", school: "ตัวอย่างวิทยา", province: "นนทบุรี", affiliation: "สพม.นนทบุรี", phone: "0800000000", createdAt: new Date().toISOString() };
   function renderTeaser() {
+    var picks = [[0, 0], [4, 2], [1, 3], [3, 1], [2, 0], [5, 2]];
+    var stack = $("#teaserStack"), imgs = [];
     Promise.all([loadFonts(), loadLogo()]).then(function () {
-      var big = renderTicket(SAMPLE, { sample: true });
-      var sm = document.createElement("canvas"); sm.width = 540; sm.height = 960;
-      sm.getContext("2d").drawImage(big, 0, 0, 540, 960);
-      $("#teaserImg").src = sm.toDataURL("image/jpeg", 0.9);
+      (function next(i) {
+        if (i >= picks.length) return rotate();
+        var big = renderTicket(SAMPLE, { sample: true, design: picks[i] });
+        var sm = document.createElement("canvas"); sm.width = 540; sm.height = 960;
+        sm.getContext("2d").drawImage(big, 0, 0, 540, 960);
+        var im = new Image(); im.alt = ""; im.src = sm.toDataURL("image/jpeg", 0.88);
+        if (i === 0) im.className = "on";
+        stack.appendChild(im); imgs.push(im);
+        setTimeout(function () { next(i + 1); }, 60);
+      })(0);
     });
+    function rotate() {
+      if (REDUCED) return;
+      var k = 0;
+      setInterval(function () {
+        if (view !== "home") return;
+        imgs[k].classList.remove("on"); k = (k + 1) % imgs.length; imgs[k].classList.add("on");
+      }, 2600);
+    }
   }
 
   /* ---------------- tilt + holo ---------------- */

@@ -9,21 +9,22 @@
 <meta name="theme-color" content="#075f98">
 <meta property="og:title" content="ลงทะเบียน TGGC 2569 · รับบัตรเข้าร่วมงาน">
 <meta property="og:description" content="กรอกข้อมูลไม่ถึง 1 นาที รับบัตรเข้าร่วมงานเป็นรูปภาพ นำไปแลกของที่ระลึก ณ อาคาร 100 ปี ชูชาติอนุสรณ์ ชั้น 1">
+<link rel="icon" type="image/png" href="assets/logo-mark.png">
+<link rel="apple-touch-icon" href="assets/logo-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="ambient" aria-hidden="true"></div>
+<div class="ambient" aria-hidden="true"><canvas id="bgTopo"></canvas><i class="breeze"></i><i class="breeze b2"></i></div>
 
 <div class="app">
   <!-- ===================== HOME ===================== -->
   <main class="view" id="homeView">
     <header class="topbar">
       <a class="brand" href="#home" data-go="home" aria-label="TGGC 2026 หน้าหลัก">
-        <span class="logo-mark" data-logo aria-hidden="true"></span>
-        <span class="wordmark"><span class="w1">TGGC</span><span class="w2">2026</span></span>
+        <img class="brand-full" src="assets/logo-full.png" alt="TGGC 2026">
       </a>
       <span class="spacer"></span>
       <button class="mine-btn" id="myTicketBtn" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M14 6v12" stroke-dasharray="2 2.5"/></svg>บัตรของฉัน</button>
@@ -32,10 +33,8 @@
 
     <section class="hero" id="top">
       <canvas id="topo" aria-hidden="true"></canvas>
-      <div class="hero-top rise">
-        <span class="hero-logo logo-mark" data-logo role="img" aria-label="โลโก้ TGGC 2026"></span>
-        <span class="wordmark"><span class="w1">TGGC</span><span class="w2">2026</span></span>
-      </div>
+      <span class="sun" aria-hidden="true"></span>
+      <img class="hero-logo-full rise" src="assets/logo-full.png" alt="โลโก้ TGGC 2026">
 
       <span class="live-chip rise d1"><span class="live-dot"></span>เปิดลงทะเบียนล่วงหน้าแล้ว</span>
 
@@ -57,6 +56,42 @@
           <div class="cd-cell"><div class="cd-num" id="cdS">--</div><div class="cd-lab">วินาที</div></div>
         </div>
       </div>
+
+      <svg class="landscape" viewBox="0 0 400 132" aria-hidden="true">
+        <defs>
+          <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a7d5db"/><stop offset="1" stop-color="#c9e7ec"/></linearGradient>
+          <linearGradient id="hillMid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ba1a5"/><stop offset="1" stop-color="#15a8a0"/></linearGradient>
+          <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2cc394"/><stop offset="1" stop-color="#148e64"/></linearGradient>
+        </defs>
+        <path d="M0 80 C60 54 110 62 170 72 C230 82 280 46 340 52 C370 55 390 62 400 66 V132 H0Z" fill="url(#hillFar)"/>
+        <g stroke="#fcfdfd" stroke-linecap="round">
+          <path d="M318 54 V24" stroke-width="2.4"/>
+          <g class="rotor" style="transform-origin:318px 24px"><path d="M318 24 V5 M318 24 L334.5 33.5 M318 24 L301.5 33.5" stroke-width="2.2"/></g>
+          <circle cx="318" cy="24" r="2.2" fill="#fcfdfd" stroke="none"/>
+          <path d="M356 58 V34" stroke-width="2"/>
+          <g class="rotor r2" style="transform-origin:356px 34px"><path d="M356 34 V19 M356 34 L369 41.5 M356 34 L343 41.5" stroke-width="1.8"/></g>
+          <circle cx="356" cy="34" r="1.8" fill="#fcfdfd" stroke="none"/>
+        </g>
+        <path d="M0 98 C50 80 100 76 150 86 C210 98 250 82 300 84 C350 86 380 94 400 98 V132 H0Z" fill="url(#hillMid)" opacity="0.9"/>
+        <g stroke="#fcfdfd" stroke-linecap="round">
+          <path d="M66 84 V50" stroke-width="2.6"/>
+          <g class="rotor r3" style="transform-origin:66px 50px"><path d="M66 50 V28 M66 50 L85 61 M66 50 L47 61" stroke-width="2.4"/></g>
+          <circle cx="66" cy="50" r="2.4" fill="#fcfdfd" stroke="none"/>
+        </g>
+        <g>
+          <path d="M196 92 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M200 90.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M216 93 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M220 91.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M236 94 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M240 92.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M204 92 v4 M224 93 v4 M244 94 v4" stroke="#0a3a5c" stroke-width="1.2"/>
+        </g>
+        <path d="M0 114 C70 98 140 102 200 110 C260 118 330 102 400 108 V132 H0Z" fill="url(#hillNear)"/>
+        <g fill="none" stroke="#fcfdfd" stroke-opacity="0.35" stroke-width="1">
+          <path d="M14 121 C80 107 140 110 200 116 C262 122 326 110 392 114"/>
+          <path d="M40 127 C96 116 150 118 205 122 C262 127 320 118 376 121"/>
+        </g>
+        <g fill="#148e64"><circle cx="128" cy="99" r="6"/><circle cx="138" cy="101" r="4.5"/><circle cx="292" cy="104" r="5"/></g>
+        <g stroke="#0e6a4b" stroke-width="1.4"><path d="M128 105 v5 M138 105.5 v4 M292 109 v4"/></g>
+      </svg>
     </section>
 
     <div class="trophy">
@@ -104,10 +139,10 @@
 
     <div class="section-title"><h2>บัตรที่คุณจะได้รับ</h2></div>
     <div class="teaser">
-      <div class="teaser-img"><img id="teaserImg" alt="ตัวอย่างบัตรเข้าร่วมงาน TGGC 2026"></div>
+      <div class="teaser-img" id="teaserStack" role="img" aria-label="ตัวอย่างลายบัตรเข้าร่วมงานหลายแบบ"></div>
       <ul class="teaser-list">
+        <li><b>สุ่มลายบัตร 24 แบบ</b><span>6 โทนสี × 4 ลายแผนที่ แต่ละคนได้ลายไม่เหมือนกัน</span></li>
         <li><b>QR และรหัสบัตรเฉพาะตัว</b><span>สแกนตรวจสอบได้ที่จุดแลกของที่ระลึก</span></li>
-        <li><b>ลวดลายพิเศษเฉพาะงาน</b><span>ตราสัญลักษณ์และลายเส้นแบบบัตรทางการ</span></li>
         <li><b>บันทึกเป็นรูปได้ทันที</b><span>เก็บไว้ในมือถือ ไม่ต้องพิมพ์</span></li>
       </ul>
     </div>
@@ -269,6 +304,7 @@
         <div class="holo" aria-hidden="true"></div>
       </div>
     </div>
+    <p class="design-note" id="designNote"></p>
     <p class="longpress">กดค้างที่บัตรเพื่อบันทึกรูปได้เช่นกัน</p>
 
     <div class="where">

@@ -10,6 +10,9 @@
  *     - ผู้มีสิทธิ์เข้าถึง (Who has access): ทุกคน (Anyone)
  *  4) อนุญาตสิทธิ์ แล้วคัดลอก URL ที่ลงท้ายด้วย /exec ไปใส่ใน public/config.js → ENDPOINT
  *
+ * อัปเดตโค้ดนี้ทับของเดิม: วางทับ → บันทึก → รีเฟรชหน้า Sheet จะเห็นเมนู "TGGC 2569"
+ * (เมนูรีเซ็ตไม่ต้อง Deploy ใหม่ · ถ้าแก้ doPost ต้องไปที่ Deploy → Manage deployments → Edit → New version)
+ *
  * คอลัมน์ในแท็บ "ลงทะเบียน":
  *  A ลำดับ | B รหัสบัตร | C วันเวลาลงทะเบียน | D คำนำหน้า | E ชื่อ | F นามสกุล | G ตำแหน่ง
  *  H โรงเรียน | I จังหวัด | J สังกัด | K เบอร์โทร | L รับของที่ระลึก (☑) | M เวลารับของ | N หมายเหตุ
@@ -89,6 +92,59 @@ function onEdit(e) {
   var target = r.getSheet().getRange(r.getRow(), COL.GOT_AT, r.getNumRows(), 1);
   var vals = r.getValues().map(function (v) { return [v[0] === true ? new Date() : '']; });
   target.setValues(vals);
+}
+
+/* ---------------- เมนูใน Google Sheet ---------------- */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('TGGC 2569')
+    .addItem('รีเซ็ตข้อมูลลงทะเบียน (หลังทดสอบ)…', 'resetRegistrations')
+    .addItem('ล้างช่องค้นหาบัตร', 'clearLookup')
+    .addToUi();
+}
+
+/**
+ * ลบข้อมูลผู้ลงทะเบียนทั้งหมด (เก็บหัวตาราง รูปแบบ และสูตรในแท็บสรุปไว้)
+ * ก่อนลบจะสำรองข้อมูลเดิมไว้ในแท็บใหม่ "สำรอง วัน-เวลา" เสมอ
+ */
+function resetRegistrations() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(SHEET_NAME);
+  var count = Math.max(0, sh.getLastRow() - 1);
+  if (!count) { ui.alert('ยังไม่มีข้อมูลผู้ลงทะเบียน ไม่ต้องรีเซ็ต'); return; }
+
+  var ok = ui.alert('รีเซ็ตข้อมูลลงทะเบียน',
+    'จะลบข้อมูลผู้ลงทะเบียนทั้งหมด ' + count + ' แถว\n(ระบบจะสำรองข้อมูลเดิมไว้ในแท็บใหม่ก่อนลบ)\n\nดำเนินการต่อหรือไม่?',
+    ui.ButtonSet.YES_NO);
+  if (ok !== ui.Button.YES) return;
+
+  var typed = ui.prompt('ยืนยันอีกครั้ง', 'พิมพ์คำว่า RESET เพื่อยืนยันการลบ', ui.ButtonSet.OK_CANCEL);
+  if (typed.getSelectedButton() !== ui.Button.OK || typed.getResponseText().trim().toUpperCase() !== 'RESET') {
+    ui.alert('ยกเลิกแล้ว ข้อมูลไม่ถูกลบ');
+    return;
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    var stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd-MM-yyyy HH:mm');
+    var backup = sh.copyTo(ss).setName('สำรอง ' + stamp);
+    backup.setTabColor('#a7d5db');
+    ss.setActiveSheet(sh);
+
+    var last = sh.getLastRow();
+    sh.getRange(2, 1, last - 1, NCOL).clearContent().clearNote();
+    clearLookup();
+  } finally {
+    lock.releaseLock();
+  }
+  ui.alert('รีเซ็ตเรียบร้อย', 'ลบข้อมูล ' + count + ' แถวแล้ว\nข้อมูลเดิมสำรองไว้ที่แท็บ "สำรอง ' + stamp + '"\n(ถ้าไม่ต้องการ ลบแท็บสำรองได้เลย)', ui.ButtonSet.OK);
+}
+
+function clearLookup() {
+  var lk = SpreadsheetApp.getActive().getSheetByName('ค้นหาบัตร');
+  if (lk) lk.getRange('C4').clearContent();
 }
 
 /* ---------------- helpers ---------------- */
