@@ -18,18 +18,18 @@
 <div class="ambient" aria-hidden="true"></div>
 
 <div class="app">
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="TGGC 2026 หน้าแรก">
-      <span class="logo-mark" data-logo aria-hidden="true"></span>
-      <span class="wordmark"><span class="w1">TGGC</span><span class="w2">2026</span></span>
-    </a>
-    <span class="spacer"></span>
-    <button class="mine-btn" id="myTicketBtn" type="button" hidden>บัตรของฉัน</button>
-    <span class="date-pill" id="datePill">28.11.69</span>
-  </header>
-
   <!-- ===================== HOME ===================== -->
-  <main id="home">
+  <main class="view" id="homeView">
+    <header class="topbar">
+      <a class="brand" href="#home" data-go="home" aria-label="TGGC 2026 หน้าหลัก">
+        <span class="logo-mark" data-logo aria-hidden="true"></span>
+        <span class="wordmark"><span class="w1">TGGC</span><span class="w2">2026</span></span>
+      </a>
+      <span class="spacer"></span>
+      <button class="mine-btn" id="myTicketBtn" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M14 6v12" stroke-dasharray="2 2.5"/></svg>บัตรของฉัน</button>
+      <span class="date-pill">28.11.69</span>
+    </header>
+
     <section class="hero" id="top">
       <canvas id="topo" aria-hidden="true"></canvas>
       <div class="hero-top rise">
@@ -45,6 +45,7 @@
         <span><span class="amp">และ</span> ภูมิสารสนเทศ</span>
       </h1>
       <p class="lede rise d3">การแข่งขันแห่งประเทศไทย <b>ระดับมัธยมศึกษา ครั้งที่ 3 พ.ศ. 2569</b> · สำหรับครูและผู้เข้าร่วมกิจกรรม</p>
+      <a class="hero-cta rise d3" href="#register" data-go="register">ลงทะเบียนล่วงหน้า <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
 
 
       <div class="countdown rise d4" aria-live="polite">
@@ -101,26 +102,49 @@
       </article>
     </div>
 
+    <div class="section-title"><h2>บัตรที่คุณจะได้รับ</h2></div>
+    <div class="teaser">
+      <div class="teaser-img"><img id="teaserImg" alt="ตัวอย่างบัตรเข้าร่วมงาน TGGC 2026"></div>
+      <ul class="teaser-list">
+        <li><b>QR และรหัสบัตรเฉพาะตัว</b><span>สแกนตรวจสอบได้ที่จุดแลกของที่ระลึก</span></li>
+        <li><b>ลวดลายพิเศษเฉพาะงาน</b><span>ตราสัญลักษณ์และลายเส้นแบบบัตรทางการ</span></li>
+        <li><b>บันทึกเป็นรูปได้ทันที</b><span>เก็บไว้ในมือถือ ไม่ต้องพิมพ์</span></li>
+      </ul>
+    </div>
+
     <div class="section-title"><h2>รับบัตรใน 3 ขั้นตอน</h2></div>
     <ol class="steps">
-      <li><span class="n">01</span><div><b>กรอกข้อมูลด้านล่าง</b><small>ใช้เวลาไม่ถึง 1 นาที</small></div></li>
+      <li><span class="n">01</span><div><b>กดปุ่มลงทะเบียน</b><small>กรอกข้อมูล 3 ขั้นสั้น ๆ ไม่ถึง 1 นาที</small></div></li>
       <li><span class="n">02</span><div><b>รับบัตรเข้าร่วมงาน</b><small>บันทึกเป็นรูปภาพเก็บไว้ในเครื่อง</small></div></li>
       <li><span class="n">03</span><div><b>แลกของที่ระลึกในวันงาน</b><small>อาคาร 100 ปี ชูชาติอนุสรณ์ ชั้น 1</small></div></li>
     </ol>
 
-    <div class="section-title" id="register"><h2>ลงทะเบียน</h2><span>ช่องที่มี <b class="req">*</b> ต้องกรอก</span></div>
-    <form class="form-card" id="regForm" novalidate autocomplete="on">
-      <div class="form-head">
-        <h2>ข้อมูลผู้เข้าร่วมงาน</h2>
-        <p>ข้อมูลจะถูกบันทึกเข้าระบบทันทีเมื่อกดออกบัตร</p>
-      </div>
-      <div class="progress" aria-hidden="true">
-        <div class="progress-bar"><i id="progBar"></i></div>
-        <div class="progress-txt"><span id="progTxt">กรอกแล้ว 0 จาก 8 ช่อง</span><span id="progPct">0%</span></div>
-      </div>
+    <footer class="foot">
+      <span class="logo-mark" data-logo aria-hidden="true"></span>
+      <div><b>TGGC ครั้งที่ 3 พ.ศ. 2569</b><br>
+      โรงเรียนชลประทานวิทยา · จังหวัดนนทบุรี<br>
+      ข้อมูลของคุณใช้เพื่อการลงทะเบียนงานนี้เท่านั้น</div>
+    </footer>
+  </main>
 
-      <fieldset class="group">
-        <legend class="group-label">01 · ผู้เข้าร่วม</legend>
+  <!-- ===================== REGISTER ===================== -->
+  <section class="view reg-view" id="registerView" hidden>
+    <header class="appbar">
+      <button class="icon-btn" id="regBack" type="button" aria-label="ย้อนกลับ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="appbar-title"><b>ลงทะเบียนเข้าร่วมงาน</b><small id="stepTxt">ขั้นที่ 1 จาก 3</small></div>
+      <span class="logo-mark appbar-logo" data-logo aria-hidden="true"></span>
+    </header>
+
+    <ol class="stepper" id="stepper">
+      <li data-s="1"><i>1</i><span>ผู้เข้าร่วม</span></li>
+      <li data-s="2"><i>2</i><span>หน่วยงาน</span></li>
+      <li data-s="3"><i>3</i><span>ยืนยัน</span></li>
+    </ol>
+
+    <form class="reg-form" id="regForm" novalidate autocomplete="on">
+      <fieldset class="step" data-step="1" aria-labelledby="s1h">
+        <div class="step-head"><h1 id="s1h">ข้อมูลผู้เข้าร่วม</h1><p>ชื่อและตำแหน่งจะพิมพ์ลงบนบัตรตามที่กรอก</p></div>
+        <div class="step-body">
 
         <div class="field" data-key="prefix">
           <span class="label" id="prefixLab">คำนำหน้า <span class="req">*</span></span>
@@ -169,10 +193,12 @@
           </div>
           <span class="err">กรุณากรอกเบอร์โทร 9–10 หลัก ขึ้นต้นด้วย 0</span>
         </div>
+        </div>
       </fieldset>
 
-      <fieldset class="group">
-        <legend class="group-label">02 · หน่วยงาน</legend>
+      <fieldset class="step" data-step="2" aria-labelledby="s2h" hidden>
+        <div class="step-head"><h1 id="s2h">หน่วยงาน</h1><p>โรงเรียนและสังกัดของคุณ</p></div>
+        <div class="step-body">
 
         <div class="field" data-key="school">
           <label for="school">โรงเรียน <span class="req">*</span></label>
@@ -203,35 +229,43 @@
           <span class="err">กรุณาระบุสังกัด</span>
         </div>
 
+        </div>
+      </fieldset>
+
+      <fieldset class="step" data-step="3" aria-labelledby="s3h" hidden>
+        <div class="step-head"><h1 id="s3h">ตรวจสอบข้อมูล</h1><p>ข้อมูลนี้จะพิมพ์ลงบนบัตรเข้าร่วมงาน</p></div>
+        <div class="step-body">
+          <div class="review" id="review"></div>
         <label class="consent" id="consentBox">
           <input type="checkbox" id="consent" name="consent">
           <span>ยินยอมให้ผู้จัดงานใช้ข้อมูลนี้เพื่อการลงทะเบียนและการแลกของที่ระลึกในงานนี้เท่านั้น</span>
         </label>
+        </div>
       </fieldset>
 
       <div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" id="website" tabindex="-1" autocomplete="off"></label></div>
       <div class="form-error" id="formError" hidden></div>
     </form>
-
-    <footer class="foot">
-      <span class="logo-mark" data-logo aria-hidden="true"></span>
-      <div><b>TGGC ครั้งที่ 3 พ.ศ. 2569</b><br>
-      โรงเรียนชลประทานวิทยา · จังหวัดนนทบุรี<br>
-      ข้อมูลของคุณใช้เพื่อการลงทะเบียนงานนี้เท่านั้น</div>
-    </footer>
-  </main>
+  </section>
 
   <!-- ===================== TICKET ===================== -->
-  <section class="ticket-view" id="ticketView" hidden>
+  <section class="view ticket-view" id="ticketView" hidden>
+    <header class="appbar">
+      <button class="icon-btn" type="button" data-go="home" aria-label="กลับหน้าหลัก"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="appbar-title"><b>บัตรเข้าร่วมงาน</b><small>TGGC ครั้งที่ 3 · 28 พ.ย. 2569</small></div>
+      <span class="logo-mark appbar-logo" data-logo aria-hidden="true"></span>
+    </header>
+
     <div class="tv-head">
       <span class="sync" id="syncPill"><i></i><span id="syncTxt">กำลังบันทึก…</span></span>
-      <h2>บัตรของคุณ<br><span class="grad">พร้อมแล้ว!</span></h2>
-      <p>บันทึกภาพบัตรนี้ไว้ แล้วนำไปแสดงที่จุดแลกของที่ระลึกในวันงาน</p>
+      <h2 id="tvTitle">ออกบัตรสำเร็จ</h2>
+      <p>บันทึกภาพบัตรนี้ไว้ แล้วแสดงที่จุดแลกของที่ระลึกในวันงาน</p>
     </div>
 
     <div class="ticket-stage">
+      <span class="spark s1" aria-hidden="true"></span><span class="spark s2" aria-hidden="true"></span><span class="spark s3" aria-hidden="true"></span><span class="spark s4" aria-hidden="true"></span>
       <div class="ticket-tilt" id="ticketTilt">
-        <img id="ticketImg" alt="บัตรเข้าร่วมงาน TGGC 2569">
+        <img id="ticketImg" alt="บัตรเข้าร่วมงาน TGGC 2026">
         <div class="holo" aria-hidden="true"></div>
       </div>
     </div>
@@ -249,14 +283,15 @@
   </section>
 </div>
 
-<!-- dock: CTA on home, submit near form, save/share on ticket -->
+<!-- bottom dock: one per view -->
 <div class="dock" id="dock">
   <div class="dock-inner" id="dockHome">
-    <span class="dock-count" id="dockCount" style="--p:0" aria-hidden="true"><b id="dockNum">0/8</b></span>
-    <button class="btn" id="submitBtn" type="submit" form="regForm">
-      <span id="submitTxt">ลงทะเบียนรับบัตร</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-    </button>
+    <button class="btn ghost" id="dockMine" type="button" aria-label="บัตรของฉัน" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M14 6v12" stroke-dasharray="2 2.5"/></svg></button>
+    <a class="btn" href="#register" data-go="register"><span>ลงทะเบียนรับบัตร</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+  <div class="dock-inner" id="dockReg" hidden>
+    <button class="btn ghost" id="prevBtn" type="button" aria-label="ขั้นก่อนหน้า" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="btn" id="nextBtn" type="button"><span id="nextTxt">ถัดไป</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
   </div>
   <div class="dock-inner" id="dockTicket" hidden>
     <button class="btn green" id="saveBtn" type="button">

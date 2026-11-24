@@ -207,7 +207,6 @@
   var form = $("#regForm");
   var FIELDS = ["prefix", "first", "last", "position", "phone", "school", "province", "affiliation"];
   var touched = {};
-  var attempted = false;
   var editingId = null;
 
   function digits(s) { return String(s || "").replace(/\D/g, ""); }
@@ -245,6 +244,11 @@
   }
   function fieldEl(k) { return form.querySelector('.field[data-key="' + k + '"]'); }
 
+  var STEPS = { 1: ["prefix", "first", "last", "position", "phone"], 2: ["school", "province", "affiliation"] };
+  var step = 1;
+  var attemptedStep = {};
+  function stepOf(k) { return STEPS[1].indexOf(k) >= 0 ? 1 : 2; }
+
   function refresh() {
     var d = readForm(), done = 0;
     FIELDS.forEach(function (k) {
@@ -252,24 +256,78 @@
       if (ok) done++;
       var el = fieldEl(k);
       el.classList.toggle("ok", ok);
-      el.classList.toggle("bad", !ok && (touched[k] || attempted));
+      el.classList.toggle("bad", !ok && !!(touched[k] || attemptedStep[stepOf(k)]));
     });
-    $("#consentBox").classList.toggle("bad", attempted && !d.consent);
-    var pct = Math.round(done / FIELDS.length * 100);
-    $("#progBar").style.width = pct + "%";
-    $("#progTxt").textContent = "กรอกแล้ว " + done + " จาก " + FIELDS.length + " ช่อง";
-    $("#progPct").textContent = pct + "%";
-    $("#dockCount").style.setProperty("--p", pct);
-    $("#dockNum").textContent = done + "/" + FIELDS.length;
-    var txt = $("#submitTxt"), btn = $("#submitBtn");
-    var all = done === FIELDS.length;
-    if (done === 0) txt.textContent = "ลงทะเบียนรับบัตร";
-    else if (!all) txt.textContent = "กรอกต่ออีก " + (FIELDS.length - done) + " ช่อง";
-    else if (!d.consent) txt.textContent = "ติ๊กยินยอม แล้วออกบัตร";
-    else txt.textContent = editingId ? "บันทึกและออกบัตรใหม่" : "ออกบัตรเข้าร่วมงาน";
-    btn.setAttribute("aria-disabled", done === 0 || (all && d.consent) ? "false" : "true");
-    return { data: d, done: done, valid: all && d.consent };
+    $("#consentBox").classList.toggle("bad", !!attemptedStep[3] && !d.consent);
+    var stepOk = step === 3 ? d.consent && done === FIELDS.length : STEPS[step].every(function (k) { return validField(k, d); });
+    var left = step === 3 ? 0 : STEPS[step].filter(function (k) { return !validField(k, d); }).length;
+    $("#nextTxt").textContent = step === 3
+      ? (editingId ? "บันทึกและออกบัตรใหม่" : "ยืนยันและออกบัตร")
+      : (left ? "ถัดไป · เหลืออีก " + left + " ช่อง" : "ถัดไป");
+    $("#nextBtn").dataset.ready = stepOk ? "1" : "0";
+    return { data: d, done: done, stepOk: stepOk };
   }
+
+  function esc(v) { return String(v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function buildReview() {
+    var d = readForm();
+    $("#review").innerHTML =
+      '<div class="rv-top"><span>ATTENDEE · ผู้เข้าร่วมงาน</span><span>TGGC 2026</span></div>' +
+      '<div class="rv-name"><span>' + esc(d.prefix + d.first) + '</span> <span>' + esc(d.last) + '</span></div>' +
+      '<span class="rv-pos">' + esc(d.position) + '</span>' +
+      '<dl class="rv-rows">' +
+      '<div class="full"><dt>โรงเรียน</dt><dd>' + esc(schoolName(d.school)) + '</dd></div>' +
+      '<div><dt>จังหวัด</dt><dd>' + esc(d.province) + '</dd></div>' +
+      '<div><dt>สังกัด</dt><dd>' + esc(d.affiliation) + '</dd></div>' +
+      '<div class="full"><dt>เบอร์โทร (บนบัตรแสดงแค่ 4 ตัวท้าย)</dt><dd>' + esc(formatPhone(d.phone)) + '</dd></div>' +
+      '</dl>' +
+      '<div class="rv-edit"><button type="button" data-step="1">แก้ไขข้อมูลผู้เข้าร่วม</button><button type="button" data-step="2">แก้ไขหน่วยงาน</button></div>';
+  }
+
+  var STEP_NAMES = { 1: "ข้อมูลผู้เข้าร่วม", 2: "หน่วยงาน", 3: "ตรวจสอบและยืนยัน" };
+  function goStep(n, instant) {
+    var back = n < step;
+    step = n;
+    $$(".step", form).forEach(function (fs) {
+      var on = Number(fs.dataset.step) === n;
+      fs.hidden = !on;
+      if (on && !instant) { fs.classList.toggle("back", back); fs.style.animation = "none"; void fs.offsetWidth; fs.style.animation = ""; }
+    });
+    $$("#stepper li").forEach(function (li) {
+      var k = Number(li.dataset.s);
+      li.classList.toggle("on", k === n);
+      li.classList.toggle("done", k < n);
+    });
+    $("#stepTxt").textContent = "ขั้นที่ " + n + " จาก 3 · " + STEP_NAMES[n];
+    $("#prevBtn").hidden = n === 1;
+    if (n === 3) buildReview();
+    $("#formError").hidden = true;
+    refresh();
+    if (!instant) window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function nextStep() {
+    var st = refresh();
+    if ($("#website").value) return; // bot
+    if (!st.stepOk) {
+      attemptedStep[step] = true; refresh();
+      if (step === 3) {
+        var missing = FIELDS.filter(function (k) { return !validField(k, st.data); })[0];
+        if (missing) { attemptedStep[stepOf(missing)] = true; goStep(stepOf(missing)); return; }
+        scrollToEl($("#consentBox"));
+      } else {
+        var firstBad = STEPS[step].filter(function (k) { return !validField(k, st.data); })[0];
+        var target = fieldEl(firstBad);
+        scrollToEl(target);
+        if (firstBad !== "prefix" && firstBad !== "province") { var inp = target.querySelector(".input"); if (inp) setTimeout(function () { inp.focus({ preventScroll: true }); }, 300); }
+      }
+      if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      return;
+    }
+    if (step < 3) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); goStep(step + 1); }
+    else issue(st.data);
+  }
+  function prevStep() { if (step > 1) goStep(step - 1); else go("home"); }
 
   function bindForm() {
     // prefix chips
@@ -320,25 +378,33 @@
     });
     $("#consent").addEventListener("change", refresh);
 
-    // Enter = next field (mobile keyboards)
-    var order = ["first", "last", "position", "phone", "school", "province", "affiliation"];
-    order.forEach(function (id, i) {
-      $("#" + id).addEventListener("keydown", function (e) {
-        if (e.key !== "Enter") return;
-        e.preventDefault();
-        var next = order[i + 1];
-        if (next) $("#" + next).focus(); else e.target.blur();
+    // Enter = next field within the step; last field blurs (mobile keyboards)
+    [["first", "last", "position", "phone"], ["school", "province", "affiliation"]].forEach(function (order) {
+      order.forEach(function (id, i) {
+        $("#" + id).addEventListener("keydown", function (e) {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          var nx = order[i + 1];
+          if (nx) $("#" + nx).focus(); else e.target.blur();
+        });
       });
     });
 
-    form.addEventListener("submit", onSubmit);
+    form.addEventListener("submit", function (e) { e.preventDefault(); nextStep(); });
+    $("#nextBtn").addEventListener("click", nextStep);
+    $("#prevBtn").addEventListener("click", prevStep);
+    $("#regBack").addEventListener("click", prevStep);
+    $("#review").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-step]");
+      if (b) goStep(Number(b.dataset.step));
+    });
   }
 
   function resetForm() {
     form.reset();
     $("#prefixOther").hidden = true;
     $("#affSuggest").textContent = "สพม.นนทบุรี";
-    touched = {}; attempted = false; editingId = null;
+    touched = {}; attemptedStep = {}; editingId = null; step = 1;
     $("#formError").hidden = true;
     refresh();
   }
@@ -415,13 +481,12 @@
   function saveTicketRecord(t) {
     var list = tickets().filter(function (x) { return x.id !== t.id && x.phone !== t.phone; });
     list.unshift(t); store.set(K_TICKETS, list.slice(0, 20));
-    $("#myTicketBtn").hidden = false;
   }
   function updateTicket(oldId, patch) {
     var list = tickets();
     list.forEach(function (t) { if (t.id === oldId) Object.assign(t, patch); });
     store.set(K_TICKETS, list);
-    if (current && current.id === oldId) { Object.assign(current, patch); showTicket(current, false); }
+    if (current && current.id === oldId) { Object.assign(current, patch); if (view === "ticket") showTicket(current, false); }
   }
 
   /* ---------------- submit ---------------- */
@@ -430,31 +495,16 @@
     window.scrollTo({ top: y, behavior: REDUCED ? "auto" : "smooth" });
   }
 
-  function onSubmit(e) {
-    e.preventDefault();
-    var st = refresh();
-    if ($("#website").value) return; // bot
-    if (!st.valid) {
-      if (st.done === 0) { scrollToEl($("#register")); return; }
-      attempted = true; refresh();
-      var firstBad = FIELDS.filter(function (k) { return !validField(k, st.data); })[0];
-      var target = firstBad ? fieldEl(firstBad) : $("#consentBox");
-      scrollToEl(target);
-      if (firstBad && firstBad !== "prefix" && firstBad !== "province") { var inp = target.querySelector(".input"); if (inp) setTimeout(function () { inp.focus({ preventScroll: true }); }, 350); }
-      if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
-      return;
-    }
-
-    var d = st.data;
+  function issue(d) {
     var payload = {
       id: editingId || genId(),
       prefix: d.prefix, first: d.first, last: d.last, position: d.position,
       school: d.school, province: d.province, affiliation: d.affiliation, phone: d.phone,
       clientTime: new Date().toISOString(),
     };
-    var btn = $("#submitBtn");
+    var btn = $("#nextBtn");
     btn.classList.add("loading");
-    $("#submitTxt").textContent = "กำลังออกบัตร…";
+    $("#nextTxt").textContent = "กำลังออกบัตร…";
     var spin = document.createElement("span"); spin.className = "spin"; btn.insertBefore(spin, btn.firstChild);
     $("#formError").hidden = true;
 
@@ -471,8 +521,10 @@
         sync: res.state, // ok | queued | demo
       });
       saveTicketRecord(t);
-      editingId = null;
-      showTicket(t, true);
+      var wasEdit = !!editingId;
+      resetForm();
+      current = t; celebrateNext = !wasEdit;
+      location.replace("#ticket");
       if (res.updated) toast("อัปเดตข้อมูลบัตรเดิมเรียบร้อย");
     });
   }
@@ -549,13 +601,99 @@
     return Promise.race([all, new Promise(function (r) { setTimeout(r, 2500); })]);
   }
 
-  function renderTicket(t) {
+  /* ---- security-print motifs (banknote / certificate style) ---- */
+  function guilloche(c, cx, cy, R, amp, k, copies, color, lw) {
+    c.save(); c.strokeStyle = color; c.lineWidth = lw;
+    for (var j = 0; j < copies; j++) {
+      var ph = j * (Math.PI * 2 / k) / copies;
+      c.beginPath();
+      for (var i = 0; i <= 900; i++) {
+        var a = i / 900 * Math.PI * 2;
+        var r = R + amp * Math.sin(k * (a + ph)) + amp * 0.35 * Math.sin(3 * k * (a - ph));
+        var x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+        if (i) c.lineTo(x, y); else c.moveTo(x, y);
+      }
+      c.stroke();
+    }
+    c.restore();
+  }
+  function waveBand(c, x0, x1, y, n, gap, amp, freq, color, lw) {
+    c.save(); c.strokeStyle = color; c.lineWidth = lw;
+    for (var i = 0; i < n; i++) {
+      c.beginPath();
+      for (var x = x0; x <= x1; x += 6) {
+        var yy = y + i * gap + amp * Math.sin(x * freq + i * 0.42) * Math.sin(x * freq * 0.23 + 1.3);
+        if (x === x0) c.moveTo(x, yy); else c.lineTo(x, yy);
+      }
+      c.stroke();
+    }
+    c.restore();
+  }
+  function microText(c, text, x, y, w, size, color) {
+    c.save();
+    c.beginPath(); c.rect(x, y - size, w, size * 1.6); c.clip();
+    font(c, 600, size, F_MONO); c.fillStyle = color;
+    var unit = text, line = "";
+    while (c.measureText(line).width < w) line += unit;
+    c.fillText(line, x, y);
+    c.restore();
+  }
+  function ringText(c, text, cx, cy, r, size, color) {
+    c.save(); font(c, 700, size, F_MONO); c.fillStyle = color; c.textAlign = "center";
+    var n = text.length;
+    for (var i = 0; i < n; i++) {
+      var a = -Math.PI / 2 + i / n * Math.PI * 2;
+      c.save(); c.translate(cx + r * Math.cos(a), cy + r * Math.sin(a)); c.rotate(a + Math.PI / 2);
+      c.fillText(text[i], 0, 0); c.restore();
+    }
+    c.restore();
+  }
+  function holoSeal(c, cx, cy, R) {
+    c.save();
+    var foil = c.createConicGradient ? c.createConicGradient(0.4, cx, cy) : c.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+    ["#a7d5db", "#ffffff", "#2cc394", "#0a98c7", "#e9fbff", "#5ba1a5", "#2cc394", "#ffffff", "#a7d5db"].forEach(function (col, i, arr) { foil.addColorStop(i / (arr.length - 1), col); });
+    // scalloped rosette edge
+    c.beginPath();
+    for (var i = 0; i <= 120; i++) {
+      var a = i / 120 * Math.PI * 2, rr2 = i % 2 ? R * 0.935 : R;
+      var x = cx + rr2 * Math.cos(a), y = cy + rr2 * Math.sin(a);
+      if (i) c.lineTo(x, y); else c.moveTo(x, y);
+    }
+    c.closePath();
+    c.shadowColor = "rgba(0,0,0,0.35)"; c.shadowBlur = 18; c.shadowOffsetY = 6;
+    c.fillStyle = foil; c.fill();
+    c.shadowColor = "transparent";
+    // inner disc
+    var disc = c.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 4, cx, cy, R * 0.82);
+    disc.addColorStop(0, "#0d8ec4"); disc.addColorStop(1, "#043a5e");
+    c.beginPath(); c.arc(cx, cy, R * 0.8, 0, Math.PI * 2); c.fillStyle = disc; c.fill();
+    c.lineWidth = 2.5; c.strokeStyle = "rgba(233,251,255,0.9)"; c.stroke();
+    // engraved rays
+    c.save(); c.beginPath(); c.arc(cx, cy, R * 0.55, 0, Math.PI * 2); c.clip();
+    c.strokeStyle = "rgba(167,213,219,0.16)"; c.lineWidth = 1;
+    for (var k = 0; k < 72; k++) { var b = k / 72 * Math.PI * 2; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + R * Math.cos(b), cy + R * Math.sin(b)); c.stroke(); }
+    c.restore();
+    c.beginPath(); c.arc(cx, cy, R * 0.56, 0, Math.PI * 2); c.lineWidth = 1.5; c.strokeStyle = "rgba(167,213,219,0.7)"; c.stroke();
+    ringText(c, "OFFICIAL PASS ★ TGGC 2026 ★ ", cx, cy + R * 0.04, R * 0.67, Math.round(R * 0.13), "#e9fbff");
+    // centre
+    c.textAlign = "center";
+    font(c, 600, Math.round(R * 0.15), F_DISPLAY); c.fillStyle = "#a7d5db"; c.fillText("ครั้งที่", cx, cy - R * 0.17);
+    font(c, 700, Math.round(R * 0.5), F_MONO); c.fillStyle = "#ffffff"; c.fillText("3", cx, cy + R * 0.3);
+    // gloss
+    var gl = c.createLinearGradient(cx - R, cy - R, cx + R * 0.2, cy + R * 0.2);
+    gl.addColorStop(0, "rgba(255,255,255,0.45)"); gl.addColorStop(0.5, "rgba(255,255,255,0)");
+    c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fillStyle = gl; c.fill();
+    c.restore();
+  }
+
+  function renderTicket(t, opt) {
+    opt = opt || {};
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d");
 
     // page ground
     var g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, "#dff1f3"); g.addColorStop(1, "#a7d5db");
+    g.addColorStop(0, "#e6f4f6"); g.addColorStop(1, "#a7d5db");
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
     // card on its own layer so the perforation notches can be punched through
@@ -566,44 +704,61 @@
     var cg = c.createLinearGradient(0, M, 0, H - M);
     cg.addColorStop(0, "#0a7fb5"); cg.addColorStop(0.42, "#075f98"); cg.addColorStop(1, "#032d4b");
     c.fillStyle = cg; c.fillRect(0, 0, W, H);
-    var glow = c.createRadialGradient(W * 0.9, 260, 10, W * 0.9, 260, 620);
-    glow.addColorStop(0, "rgba(44,195,148,0.45)"); glow.addColorStop(1, "rgba(44,195,148,0)");
+    var glow = c.createRadialGradient(W * 0.9, 240, 10, W * 0.9, 240, 620);
+    glow.addColorStop(0, "rgba(44,195,148,0.42)"); glow.addColorStop(1, "rgba(44,195,148,0)");
     c.fillStyle = glow; c.fillRect(0, 0, W, H);
     var glow2 = c.createRadialGradient(120, PERF + 300, 10, 120, PERF + 300, 640);
     glow2.addColorStop(0, "rgba(10,152,199,0.4)"); glow2.addColorStop(1, "rgba(10,152,199,0)");
     c.fillStyle = glow2; c.fillRect(0, 0, W, H);
-    drawTopo(c, W, H, { seed: 2569, levels: 22, cell: 12, scale: 0.0032, minorAlpha: 0.5, lineWidth: 1.6,
-      color: function (p) { return p < 0.5 ? "rgba(167,213,219,0.26)" : "rgba(44,195,148,0.30)"; } });
+    drawTopo(c, W, H, { seed: 2569, levels: 22, cell: 12, scale: 0.0032, minorAlpha: 0.5, lineWidth: 1.4,
+      color: function (p) { return p < 0.5 ? "rgba(167,213,219,0.16)" : "rgba(44,195,148,0.2)"; } });
+    // guilloche rosette behind the attendee block, with the logo as a watermark at its heart
+    var gx = W - 170, gy = 930;
+    guilloche(c, gx, gy, 300, 18, 26, 7, "rgba(167,213,219,0.13)", 1.2);
+    guilloche(c, gx, gy, 220, 24, 18, 12, "rgba(167,213,219,0.18)", 1.2);
+    guilloche(c, gx, gy, 140, 16, 14, 10, "rgba(44,195,148,0.24)", 1.2);
+    if (logoImg) { c.save(); c.globalAlpha = 0.12; c.drawImage(logoImg, gx - 95, gy - 95, 190, 190); c.restore(); }
+    // security wave band under the event title
+    waveBand(c, M, W - M, 642, 12, 3.2, 14, 0.011, "rgba(167,213,219,0.22)", 1.1);
+    // stub rosette
+    guilloche(c, 220, PERF + 420, 230, 14, 20, 8, "rgba(167,213,219,0.10)", 1.1);
+    // gloss
+    var gl = c.createLinearGradient(0, 0, W * 0.65, H * 0.4);
+    gl.addColorStop(0, "rgba(255,255,255,0.13)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = gl; c.fillRect(0, 0, W, H);
     c.restore();
-    // gold hairline
-    rr(c, M + 1.5, M + 1.5, CW - 3, CH - 3, 55);
-    var hl = c.createLinearGradient(0, 0, W, H);
-    hl.addColorStop(0, "rgba(167,213,219,0.9)"); hl.addColorStop(0.5, "rgba(167,213,219,0.15)"); hl.addColorStop(1, "rgba(44,195,148,0.9)");
-    c.strokeStyle = hl; c.lineWidth = 3; c.stroke();
+
+    // metallic outer frame + engraved inner frame + corner marks
+    var mf = c.createLinearGradient(0, 0, W, H);
+    ["#a7d5db", "#ffffff", "#2cc394", "#0a98c7", "#ffffff", "#5ba1a5", "#a7d5db"].forEach(function (col, i, a) { mf.addColorStop(i / (a.length - 1), col); });
+    rr(c, M + 3, M + 3, CW - 6, CH - 6, 53); c.strokeStyle = mf; c.lineWidth = 6; c.stroke();
+    rr(c, M + 20, M + 20, CW - 40, CH - 40, 38); c.strokeStyle = "rgba(167,213,219,0.35)"; c.lineWidth = 1.5; c.stroke();
+    c.strokeStyle = "rgba(44,195,148,0.9)"; c.lineWidth = 3; c.lineCap = "round";
+    [[M + 34, M + 34, 1, 1], [W - M - 34, M + 34, -1, 1], [M + 34, H - M - 34, 1, -1], [W - M - 34, H - M - 34, -1, -1]].forEach(function (q) {
+      c.beginPath(); c.moveTo(q[0], q[1] + 26 * q[3]); c.lineTo(q[0], q[1]); c.lineTo(q[0] + 26 * q[2], q[1]); c.stroke();
+    });
     // notches
     c.globalCompositeOperation = "destination-out";
     [M, W - M].forEach(function (x) { c.beginPath(); c.arc(x, PERF, 38, 0, Math.PI * 2); c.fill(); });
     c.globalCompositeOperation = "source-over";
+    [M, W - M].forEach(function (x, i) { c.beginPath(); c.arc(x, PERF, 41, i ? Math.PI / 2 : -Math.PI / 2, i ? Math.PI * 1.5 : Math.PI / 2); c.strokeStyle = mf; c.lineWidth = 4; c.stroke(); });
     // perforation
-    c.save(); c.setLineDash([16, 14]); c.strokeStyle = "rgba(255,255,255,0.28)"; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(M + 58, PERF); c.lineTo(W - M - 58, PERF); c.stroke(); c.restore();
+    c.save(); c.setLineDash([14, 12]); c.strokeStyle = "rgba(233,251,255,0.35)"; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(M + 60, PERF); c.lineTo(W - M - 60, PERF); c.stroke(); c.restore();
+    ctx.shadowColor = "rgba(4,50,79,0.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
     ctx.drawImage(card, 0, 0);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
     var X = 128, CWID = W - X * 2;
     ctx.textBaseline = "alphabetic";
 
-    // header: logo on a white tile + wordmark
+    // header: logo tile + wordmark + holographic seal
     rr(ctx, 124, 116, 108, 108, 30); ctx.fillStyle = "#fcfdfd"; ctx.fill();
     if (logoImg) ctx.drawImage(logoImg, 130, 122, 96, 96);
     font(ctx, 700, 44, F_MONO); ctx.fillStyle = "#ffffff"; ctx.fillText("TGGC", 256, 166);
     var tw = ctx.measureText("TGGC ").width; ctx.fillStyle = "#2cc394"; ctx.fillText("2026", 256 + tw, 166);
-    ctx.fillStyle = "#a7d5db"; font(ctx, 600, 24, F_BODY); ctx.fillText("บัตรเข้าร่วมงาน · ADMIT ONE", 256, 204);
-
-    // edition pill
-    font(ctx, 600, 26, F_DISPLAY);
-    var pill = "ครั้งที่ 3", pw = ctx.measureText(pill).width + 44;
-    rr(ctx, W - X - pw, 143, pw, 54, 27); ctx.strokeStyle = "rgba(44,195,148,0.95)"; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.fillStyle = "#2cc394"; ctx.fillText(pill, W - X - pw + 22, 180);
+    ctx.fillStyle = "#a7d5db"; font(ctx, 600, 23, F_BODY); ctx.fillText("บัตรเข้าร่วมงาน · OFFICIAL PASS", 256, 204);
+    holoSeal(ctx, W - X - 66, 174, 84);
 
     // title
     var y = 300;
@@ -616,15 +771,16 @@
     ctx.fillText("ระดับมัธยมศึกษา ครั้งที่ 3 พ.ศ. 2569", X, y); y += 54;
     var RL = ["ชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า", "กรมสมเด็จพระเทพรัตนราชสุดาฯ สยามบรมราชกุมารี"];
     var rs = fitBlock(ctx, RL, CWID, 27, 20, 400, F_BODY);
-    font(ctx, 400, rs, F_BODY); ctx.fillStyle = "rgba(220,240,244,0.85)";
+    font(ctx, 400, rs, F_BODY); ctx.fillStyle = "rgba(220,240,244,0.88)";
     RL.forEach(function (l) { ctx.fillText(l, X, y); y += Math.round(rs * 1.45); });
 
-    // divider
+    // divider + microtext
     y += 16;
     var dg = ctx.createLinearGradient(X, 0, W - X, 0);
-    dg.addColorStop(0, "rgba(44,195,148,0.9)"); dg.addColorStop(1, "rgba(44,195,148,0)");
+    dg.addColorStop(0, "rgba(44,195,148,0.95)"); dg.addColorStop(1, "rgba(44,195,148,0)");
     ctx.fillStyle = dg; ctx.fillRect(X, y, CWID, 2);
-    y += 58;
+    microText(ctx, "TGGC2026·GEOGRAPHY·GEOINFORMATICS·ภูมิศาสตร์·ภูมิสารสนเทศ·ครั้งที่3·", X, y + 22, CWID, 12, "rgba(167,213,219,0.55)");
+    y += 64;
 
     // attendee
     ctx.fillStyle = "#2cc394"; font(ctx, 700, 24, F_MONO); ctx.fillText("ATTENDEE · ผู้เข้าร่วมงาน", X, y);
@@ -635,8 +791,10 @@
     if (ctx.measureText(full).width <= CWID) { NL = [full]; ns = fitBlock(ctx, NL, CWID, 86, 74, 700, F_DISPLAY); }
     else { NL = [t.prefix + t.first, t.last]; ns = fitBlock(ctx, NL, CWID, 80, 40, 700, F_DISPLAY); }
     font(ctx, 700, ns, F_DISPLAY); ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(44,195,148,0.45)"; ctx.shadowBlur = 26;
     NL.forEach(function (l) { y += Math.round(ns * 1.1); ctx.fillText(l, X, y); });
-    y += 34;
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+    y += 32;
 
     // position pill
     var pos = fit(ctx, t.position, CWID - 52, 1, 30, 22, 600, F_BODY);
@@ -645,8 +803,9 @@
     var ppg = ctx.createLinearGradient(X, 0, X + ppw, 0);
     ppg.addColorStop(0, "#2cc394"); ppg.addColorStop(1, "#148e64");
     rr(ctx, X, y, ppw, 58, 29); ctx.fillStyle = ppg; ctx.fill();
+    ctx.strokeStyle = "rgba(233,251,255,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = "#ffffff"; ctx.fillText(pos.lines[0], X + 26, y + 39);
-    y += 58 + 50;
+    y += 58 + 48;
 
     // school (full width) + province / affiliation (two columns)
     function kv(label, value, x, yy, w, size) {
@@ -654,14 +813,21 @@
       var f = fit(ctx, value, w, 1, size, 22, 600, F_BODY);
       font(ctx, 600, f.size, F_BODY); ctx.fillStyle = "#fcfdfd"; ctx.fillText(f.lines[0], x, yy + 44);
     }
-    var rowY = y;
-    kv("โรงเรียน", schoolName(t.school), X, rowY, CWID, 34);
-    kv("จังหวัด", t.province, X, rowY + 104, CWID / 2 - 20, 32);
-    kv("สังกัด", t.affiliation, X + CWID / 2 + 10, rowY + 104, CWID / 2 - 10, 32);
+    kv("โรงเรียน", schoolName(t.school), X, y, CWID, 34);
+    kv("จังหวัด", t.province, X, y + 100, CWID / 2 - 20, 32);
+    kv("สังกัด", t.affiliation, X + CWID / 2 + 10, y + 100, CWID / 2 - 10, 32);
+
+    // perforation label
+    font(ctx, 600, 19, F_BODY);
+    var stubTxt = "ส่วนแลกของที่ระลึก · SOUVENIR STUB", stw = ctx.measureText(stubTxt).width + 40;
+    rr(ctx, (W - stw) / 2, PERF - 20, stw, 40, 20); ctx.fillStyle = "#064c78"; ctx.fill();
+    ctx.strokeStyle = "rgba(44,195,148,0.7)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "#a7d5db"; ctx.fillText(stubTxt, (W - stw) / 2 + 20, PERF + 7);
 
     // ---------- stub ----------
-    var sy = PERF + 62, QR = 320;
+    var sy = PERF + 66, QR = 316;
     rr(ctx, X, sy, QR, QR, 28); ctx.fillStyle = "#ffffff"; ctx.fill();
+    rr(ctx, X - 8, sy - 8, QR + 16, QR + 16, 34); ctx.strokeStyle = mf; ctx.lineWidth = 3; ctx.stroke();
     try {
       var qr = window.qrcode(0, "M"); qr.addData(t.id); qr.make();
       var n = qr.getModuleCount(), pad = 26, cell = Math.floor((QR - pad * 2) / n), off = Math.floor((QR - cell * n) / 2);
@@ -671,43 +837,65 @@
       ctx.fillStyle = "#043a5e"; font(ctx, 700, 40, F_MONO); ctx.fillText(t.id, X + 40, sy + QR / 2);
     }
 
-    var rx = X + QR + 44, rw = W - X - rx;
-    ctx.fillStyle = "rgba(167,213,219,0.9)"; font(ctx, 500, 22, F_BODY); ctx.fillText("รหัสบัตร", rx, sy + 30);
-    var idf = fit(ctx, t.id, rw, 1, 66, 40, 700, F_MONO);
-    font(ctx, 700, idf.size, F_MONO); ctx.fillStyle = "#ffffff"; ctx.fillText(t.id, rx, sy + 96);
-    if (t.no) { ctx.fillStyle = "#2cc394"; font(ctx, 700, 26, F_MONO); ctx.fillText("No. " + String(t.no).padStart(4, "0"), rx, sy + 136); }
-    ctx.fillStyle = "#2cc394"; font(ctx, 600, 32, F_DISPLAY); ctx.fillText("เสาร์ 28 พ.ย. 2569", rx, sy + 200);
+    var rx = X + QR + 48, rw = W - X - rx;
+    ctx.fillStyle = "rgba(167,213,219,0.9)"; font(ctx, 600, 20, F_MONO); ctx.fillText("TICKET ID · รหัสบัตร", rx, sy + 26);
+    var idf = fit(ctx, t.id, rw, 1, 64, 40, 700, F_MONO);
+    font(ctx, 700, idf.size, F_MONO); ctx.fillStyle = "#ffffff"; ctx.fillText(t.id, rx, sy + 92);
+    if (t.no) { ctx.fillStyle = "#2cc394"; font(ctx, 700, 26, F_MONO); ctx.fillText("Nº " + String(t.no).padStart(4, "0"), rx, sy + 132); }
+    ctx.fillStyle = "rgba(167,213,219,0.35)"; ctx.fillRect(rx, sy + 160, rw, 1.5);
+    ctx.fillStyle = "#2cc394"; font(ctx, 600, 32, F_DISPLAY); ctx.fillText("เสาร์ 28 พ.ย. 2569", rx, sy + 210);
     var ven = fit(ctx, "โรงเรียนชลประทานวิทยา จังหวัดนนทบุรี", rw, 2, 25, 20, 400, F_BODY);
-    font(ctx, 400, ven.size, F_BODY); ctx.fillStyle = "rgba(232,245,248,0.88)";
-    ven.lines.forEach(function (l, i) { ctx.fillText(l, rx, sy + 242 + i * 36); });
+    font(ctx, 400, ven.size, F_BODY); ctx.fillStyle = "rgba(232,245,248,0.9)";
+    ven.lines.forEach(function (l, i) { ctx.fillText(l, rx, sy + 250 + i * 36); });
 
     // meta line
     ctx.fillStyle = "rgba(167,213,219,0.8)"; font(ctx, 400, 22, F_BODY);
-    ctx.fillText("ลงทะเบียน " + thDate(t.createdAt) + "  ·  โทร " + maskPhone(t.phone), X, sy + QR + 48);
+    ctx.fillText("ลงทะเบียน " + thDate(t.createdAt) + "  ·  โทร " + maskPhone(t.phone), X, sy + QR + 52);
 
     // redemption band
     var by = H - M - 56 - 100;
     var bg = ctx.createLinearGradient(X, 0, W - X, 0);
     bg.addColorStop(0, "#2cc394"); bg.addColorStop(0.55, "#15a8a0"); bg.addColorStop(1, "#0a98c7");
     rr(ctx, X, by, CWID, 100, 50); ctx.fillStyle = bg; ctx.fill();
+    var bsh = ctx.createLinearGradient(0, by, 0, by + 100);
+    bsh.addColorStop(0, "rgba(255,255,255,0.28)"); bsh.addColorStop(0.5, "rgba(255,255,255,0)");
+    ctx.fillStyle = bsh; ctx.fill();
     var band = fit(ctx, "แลกของที่ระลึก · อาคาร 100 ปี ชูชาติอนุสรณ์ ชั้น 1", CWID - 80, 1, 32, 22, 600, F_DISPLAY);
     font(ctx, 600, band.size, F_DISPLAY); ctx.fillStyle = "#ffffff";
     var bw = ctx.measureText(band.lines[0]).width;
     ctx.fillText(band.lines[0], X + (CWID - bw) / 2, by + 50 + band.size * 0.36);
+    microText(ctx, "TGGC2026·OFFICIAL·PASS·", X + 30, H - M - 22, CWID - 60, 11, "rgba(167,213,219,0.45)");
 
+    if (opt.sample) {
+      ctx.save(); ctx.translate(W / 2, 1000); ctx.rotate(-0.2);
+      rr(ctx, -340, -78, 680, 156, 28); ctx.fillStyle = "rgba(4,50,79,0.55)"; ctx.fill();
+      ctx.strokeStyle = "rgba(252,253,253,0.9)"; ctx.lineWidth = 8; ctx.stroke();
+      font(ctx, 700, 64, F_DISPLAY); ctx.fillStyle = "#ffffff"; ctx.textAlign = "center";
+      ctx.fillText("ตัวอย่างบัตร", 0, 24);
+      ctx.restore();
+    }
     return cv;
   }
 
-  /* ---------------- views ---------------- */
-  var current = null, currentCanvas = null;
-  function showView(name) {
-    var ticket = name === "ticket";
-    $("#home").hidden = ticket;
-    $("#ticketView").hidden = !ticket;
-    $("#dockHome").hidden = ticket;
-    $("#dockTicket").hidden = !ticket;
-    $("#myTicketBtn").hidden = ticket || !tickets().length;
-    if (!ticket) requestAnimationFrame(paintBackgrounds);
+  /* ---------------- views (hash routes: #home, #register, #ticket) ---------------- */
+  var current = null, currentCanvas = null, celebrateNext = false, view = "home";
+  var VIEWS = { home: "#homeView", register: "#registerView", ticket: "#ticketView" };
+  function go(name) { if (location.hash.slice(1) === name) route(); else location.hash = name; }
+  function route() {
+    var name = location.hash.slice(1);
+    if (!VIEWS[name]) name = "home";
+    if (name === "ticket" && !current) { var l = tickets(); if (l.length) current = l[0]; else name = "home"; }
+    view = name;
+    Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k]).hidden = k !== name; });
+    $("#dockHome").hidden = name !== "home";
+    $("#dockReg").hidden = name !== "register";
+    $("#dockTicket").hidden = name !== "ticket";
+    var has = tickets().length > 0;
+    $("#myTicketBtn").hidden = !has; $("#dockMine").hidden = !has;
+    window.scrollTo(0, 0);
+    if (name === "home") requestAnimationFrame(paintBackgrounds);
+    if (name === "register") goStep(step, true);
+    if (name === "ticket") { showTicket(current, celebrateNext); celebrateNext = false; }
   }
 
   function setSync(t) {
@@ -721,18 +909,29 @@
   function showTicket(t, celebrate) {
     current = t;
     setSync(t);
-    showView("ticket");
-    if (celebrate) window.scrollTo({ top: 0, behavior: "auto" });
+    $(".tv-head").classList.toggle("again", !celebrate);
+    $("#tvTitle").textContent = celebrate ? "ออกบัตรสำเร็จ" : "บัตรของคุณ";
+    var img = $("#ticketImg"), tilt = $("#ticketTilt");
+    if (celebrate) img.style.visibility = "hidden";
     Promise.all([loadFonts(), loadLogo()]).then(function () {
       currentCanvas = renderTicket(t);
-      var img = $("#ticketImg");
       img.src = currentCanvas.toDataURL("image/png");
-      var tilt = $("#ticketTilt");
+      img.style.visibility = "";
       if (celebrate && !REDUCED) {
-        tilt.classList.remove("ticket-enter"); void tilt.offsetWidth; tilt.classList.add("ticket-enter");
-        setTimeout(confetti, 450);
+        tilt.classList.remove("ticket-print"); void tilt.offsetWidth; tilt.classList.add("ticket-print");
+        setTimeout(confetti, 1000);
         if (navigator.vibrate) navigator.vibrate([30, 60, 30]);
       }
+    });
+  }
+
+  var SAMPLE = { id: "TG-S4MPL", no: 1, prefix: "นาย", first: "ภูมิ", last: "สารสนเทศ", position: "ครู", school: "ตัวอย่างวิทยา", province: "นนทบุรี", affiliation: "สพม.นนทบุรี", phone: "0800000000", createdAt: new Date().toISOString() };
+  function renderTeaser() {
+    Promise.all([loadFonts(), loadLogo()]).then(function () {
+      var big = renderTicket(SAMPLE, { sample: true });
+      var sm = document.createElement("canvas"); sm.width = 540; sm.height = 960;
+      sm.getContext("2d").drawImage(big, 0, 0, 540, 960);
+      $("#teaserImg").src = sm.toDataURL("image/jpeg", 0.9);
     });
   }
 
@@ -787,7 +986,7 @@
   function shareImage() {
     canvasBlob().then(function (blob) {
       var file = new File([blob], fileName(), { type: "image/png" });
-      var data = { title: "บัตรเข้าร่วมงาน TGGC 2569", text: "บัตรเข้าร่วมงาน TGGC 2569 · รหัส " + current.id };
+      var data = { title: "บัตรเข้าร่วมงาน TGGC 2026", text: "บัตรเข้าร่วมงาน TGGC 2026 · รหัส " + current.id };
       if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
       navigator.share(data).catch(function () {});
     });
@@ -827,27 +1026,27 @@
     mountLogos();
     fillProvinces();
     bindForm();
-    refresh();
     bindTilt();
-    paintBackgrounds();
-    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { $$("canvas[data-done]").forEach(function (c) { delete c.dataset.done; }); paintBackgrounds(); }, 200); });
+    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { $$("canvas[data-done]").forEach(function (c) { delete c.dataset.done; }); if (view === "home") paintBackgrounds(); }, 200); });
 
     if (tickCountdown()) { var iv = setInterval(function () { if (!tickCountdown()) clearInterval(iv); }, 1000); }
 
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest("[data-go]");
+      if (!a) return;
+      e.preventDefault(); go(a.dataset.go);
+    });
     $("#saveBtn").addEventListener("click", saveImage);
     if (navigator.share && !IS_IOS) { $("#shareBtn").hidden = false; $("#shareBtn").addEventListener("click", shareImage); }
-    $("#myTicketBtn").addEventListener("click", function () { var l = tickets(); if (l.length) showTicket(l[0], false); });
-    $("#editBtn").addEventListener("click", function () {
-      if (!current) return;
-      fillForm(current); showView("home");
-      setTimeout(function () { scrollToEl($("#register")); }, 50);
-    });
-    $("#newBtn").addEventListener("click", function () {
-      resetForm(); showView("home");
-      setTimeout(function () { scrollToEl($("#register")); }, 50);
-    });
+    function openMine() { var l = tickets(); if (l.length) { current = l[0]; go("ticket"); } }
+    $("#myTicketBtn").addEventListener("click", openMine);
+    $("#dockMine").addEventListener("click", openMine);
+    $("#editBtn").addEventListener("click", function () { if (!current) return; fillForm(current); go("register"); });
+    $("#newBtn").addEventListener("click", function () { resetForm(); go("register"); });
 
-    if (tickets().length) $("#myTicketBtn").hidden = false;
+    window.addEventListener("hashchange", route);
+    route();
+    setTimeout(renderTeaser, 200);
     window.addEventListener("online", flushQueue);
     flushQueue();
   }
