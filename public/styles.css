@@ -37,7 +37,8 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-html, body { background: var(--white); }
+html { background: #e9f6f8; }
+body { background: transparent; } /* the .ambient layer (z-index -1) paints the page */
 body {
   margin: 0;
   color: var(--ink);
@@ -54,7 +55,7 @@ body::before {
   inset: 0 0 auto;
   height: env(safe-area-inset-top, 0px);
   z-index: 50;
-  background: var(--white);
+  background: #e2f2f6;
 }
 img { max-width: 100%; display: block; }
 button, input, select { font: inherit; color: inherit; }
@@ -80,18 +81,58 @@ a { color: var(--sea); }
     radial-gradient(90% 50% at 85% -5%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 60%),
     radial-gradient(70% 40% at 0% 30%, rgba(44, 195, 148, 0.10), transparent 70%),
     radial-gradient(80% 45% at 100% 100%, rgba(10, 152, 199, 0.10), transparent 70%),
-    linear-gradient(180deg, #dff1f5 0%, #eef8fa 30%, var(--white) 65%, #eef7f4 100%);
+    linear-gradient(180deg, #dcf0f5 0%, #e9f6f8 32%, #f2faf9 62%, #e6f5f0 100%);
 }
 /* lat/long graticule, like the frame of a map sheet */
 .ambient::before {
   content: "";
   position: absolute; inset: 0;
   background:
-    repeating-linear-gradient(0deg, rgba(7, 95, 152, 0.05) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(90deg, rgba(7, 95, 152, 0.05) 0 1px, transparent 1px 72px);
-  -webkit-mask-image: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 85%);
-          mask-image: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 85%);
+    repeating-linear-gradient(0deg, rgba(7, 95, 152, 0.06) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, rgba(7, 95, 152, 0.06) 0 1px, transparent 1px 72px);
+  -webkit-mask-image: radial-gradient(140% 100% at 50% 40%, #000 40%, rgba(0, 0, 0, 0.35) 100%);
+          mask-image: radial-gradient(140% 100% at 50% 40%, #000 40%, rgba(0, 0, 0, 0.35) 100%);
 }
+/* survey "+" marks on every other grid crossing, like a printed map sheet */
+.ambient .marks {
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='144' height='144'%3E%3Cpath d='M0 -6V6M-6 0H6M144 -6V6M138 0H150M0 138V150M-6 144H6M144 138V150M138 144H150' stroke='%23075f98' stroke-opacity='.28' stroke-width='1.4'/%3E%3Ccircle cx='72' cy='72' r='1.6' fill='%2315a8a0' fill-opacity='.35'/%3E%3C/svg%3E");
+  background-size: 144px 144px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 85%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 85%, transparent 100%);
+}
+/* slow satellite scan line */
+.ambient .sweep {
+  position: absolute; left: 0; right: 0; top: 0; height: 160px;
+  background: linear-gradient(180deg, rgba(44, 195, 148, 0) 0%, rgba(44, 195, 148, 0.07) 70%, rgba(44, 195, 148, 0.22) 99%, rgba(44, 195, 148, 0) 100%);
+  transform: translateY(-170px);
+  animation: sweep 16s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+@keyframes sweep { 0% { transform: translateY(-170px); } 55%, 100% { transform: translateY(110vh); } }
+.ambient .orbits { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ambient .orb { fill: none; stroke: rgba(7, 95, 152, 0.16); stroke-width: 1; stroke-dasharray: 2 6; }
+.ambient .orb.b { stroke: rgba(21, 168, 160, 0.16); }
+.ambient .sat { opacity: 0.55; }
+/* location pins with a slow ripple */
+.ambient .pin {
+  position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+  background: var(--mint); box-shadow: 0 0 0 3px rgba(44, 195, 148, 0.18); opacity: 0.7;
+}
+.ambient .pin::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(44, 195, 148, 0.55);
+  animation: ripple 3.6s ease-out infinite;
+}
+.ambient .pin.p2 { background: var(--sea); box-shadow: 0 0 0 3px rgba(10, 152, 199, 0.16); }
+.ambient .pin.p2::after { border-color: rgba(10, 152, 199, 0.5); animation-delay: 1.2s; }
+.ambient .pin.p3::after { animation-delay: 2.4s; }
+@keyframes ripple { from { transform: scale(0.6); opacity: 1; } to { transform: scale(4.2); opacity: 0; } }
+/* map-sheet margin text */
+.ambient .coord {
+  position: absolute; font-family: var(--f-tech); font-size: 9.5px; font-weight: 600; letter-spacing: 0.22em;
+  color: rgba(7, 95, 152, 0.28); white-space: nowrap;
+}
+.ambient .coord.c1 { left: 3px; top: 50%; transform-origin: 0 0; transform: rotate(-90deg) translate(-50%, 0); }
+.ambient .coord.c2 { right: 3px; top: 50%; transform-origin: 100% 0; transform: rotate(90deg) translate(50%, 0); }
 #bgTopo { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ambient .breeze {
   position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%;
@@ -103,6 +144,11 @@ a { color: var(--sea); }
   background: radial-gradient(closest-side, rgba(10, 152, 199, 0.14), rgba(10, 152, 199, 0));
   left: auto; right: -30vmax; top: -10%;
   animation-duration: 32s; animation-direction: alternate-reverse;
+}
+.ambient .breeze.b3 {
+  width: 55vmax; height: 55vmax; left: 30%; top: 70%;
+  background: radial-gradient(closest-side, rgba(21, 168, 160, 0.12), rgba(21, 168, 160, 0));
+  animation-duration: 38s;
 }
 @keyframes breeze { from { transform: translate(0, 0); } to { transform: translate(12vmax, -6vmax); } }
 
@@ -121,7 +167,8 @@ a { color: var(--sea); }
   align-items: center;
   gap: 10px;
   padding-block: 10px;
-  background: linear-gradient(to bottom, rgba(252, 253, 253, 0.96), rgba(252, 253, 253, 0.75));
+  background: rgba(226, 242, 246, 0.78);
+  box-shadow: 0 0 0 100vmax rgba(226, 242, 246, 0.78); clip-path: inset(0 -100vmax); /* full-bleed tint, no white box */
   -webkit-backdrop-filter: blur(14px);
           backdrop-filter: blur(14px);
 }
@@ -456,7 +503,7 @@ select.input:invalid { color: var(--dim); }
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  background: linear-gradient(to top, rgba(252, 253, 253, 0.98) 60%, rgba(252, 253, 253, 0));
+  background: linear-gradient(to top, rgba(232, 246, 242, 0.97) 60%, rgba(232, 246, 242, 0));
 }
 .dock-inner { max-width: 488px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
 .btn {
@@ -598,6 +645,7 @@ select.input:invalid { color: var(--dim); }
 @media (min-width: 560px) { .rail { grid-auto-columns: 60%; } }
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue svg { animation: none; }
+  .ambient .sweep { display: none; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   html { scroll-behavior: auto; }
 }
@@ -664,7 +712,8 @@ select.input:invalid { color: var(--dim); }
   align-items: center;
   gap: 10px;
   padding-block: 10px;
-  background: linear-gradient(to bottom, rgba(252, 253, 253, 0.97), rgba(252, 253, 253, 0.82));
+  background: rgba(226, 242, 246, 0.78);
+  box-shadow: 0 0 0 100vmax rgba(226, 242, 246, 0.78); clip-path: inset(0 -100vmax); /* full-bleed tint, no white box */
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 .icon-btn {

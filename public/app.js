@@ -159,7 +159,10 @@
       bias: function (x, y) { return -0.3 * ((x - 0.15) * (x - 0.15) + (y - 0.85) * (y - 0.85)); },
     });
     var bg = $("#bgTopo");
-    if (bg) paintCanvas(bg, { seed: 77, levels: 14, scale: 0.0028, cell: 12, minorAlpha: 0.5, color: "rgba(7,95,152,0.07)" });
+    if (bg) paintCanvas(bg, { seed: 77, levels: 14, scale: 0.0028, cell: 12, minorAlpha: 0.55,
+      color: function (p) { return p < 0.5 ? "rgba(7,95,152,0.10)" : "rgba(20,142,100,0.11)"; } });
+    var orb = $("#orbits");
+    if (orb && REDUCED && orb.pauseAnimations) orb.pauseAnimations();
     $$("canvas[data-topo]").forEach(function (cv) {
       paintCanvas(cv, { seed: 300 + Number(cv.dataset.topo) * 37, levels: 12, scale: 0.012, cell: 6, minorAlpha: 0.6, color: "rgba(255,255,255,0.32)" });
     });

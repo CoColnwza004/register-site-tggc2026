@@ -17,7 +17,25 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="ambient" aria-hidden="true"><canvas id="bgTopo"></canvas><i class="breeze"></i><i class="breeze b2"></i></div>
+<div class="ambient" aria-hidden="true">
+  <canvas id="bgTopo"></canvas><i class="breeze"></i><i class="breeze b2"></i><i class="breeze b3"></i>
+  <i class="marks"></i><i class="sweep"></i>
+  <svg class="orbits" id="orbits" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <path id="orbA" d="M40 180a260 70 0 1 0 520 0a260 70 0 1 0-520 0" transform="rotate(-16 300 180)"/>
+      <path id="orbB" d="M-140 640a220 58 0 1 0 440 0a220 58 0 1 0-440 0" transform="rotate(14 80 640)"/>
+      <radialGradient id="satGlow"><stop offset="0" stop-color="#2cc394" stop-opacity=".55"/><stop offset="1" stop-color="#2cc394" stop-opacity="0"/></radialGradient>
+    </defs>
+    <use href="#orbA" class="orb"/><use href="#orbB" class="orb b"/>
+    <g class="sat"><circle r="9" fill="url(#satGlow)"/><rect x="-2.6" y="-2" width="5.2" height="4" rx="1" fill="#075f98"/><rect x="-9" y="-1.3" width="5.4" height="2.6" fill="#0a98c7"/><rect x="3.6" y="-1.3" width="5.4" height="2.6" fill="#0a98c7"/>
+      <animateMotion dur="46s" repeatCount="indefinite" rotate="auto"><mpath href="#orbA"/></animateMotion></g>
+    <g class="sat s2"><circle r="7" fill="url(#satGlow)"/><circle r="2.2" fill="#15a8a0"/>
+      <animateMotion dur="64s" repeatCount="indefinite" begin="-20s"><mpath href="#orbB"/></animateMotion></g>
+  </svg>
+  <i class="pin" style="left:calc(50% - min(46vw, 268px));top:24%"></i><i class="pin p2" style="left:calc(50% + min(46vw, 268px));top:52%"></i><i class="pin p3" style="left:calc(50% - min(46vw, 268px));top:83%"></i>
+  <span class="coord c1">LAT 13.9°N · LONG 100.5°E · NONTHABURI</span>
+  <span class="coord c2">TGGC 2026 · GEOGRAPHY &amp; GEOINFORMATICS · WGS 84</span>
+</div>
 
 <div class="app">
   <!-- ===================== HOME ===================== -->

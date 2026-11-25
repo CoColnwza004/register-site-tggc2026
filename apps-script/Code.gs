@@ -109,7 +109,7 @@ function onOpen() {
 }
 
 /* ---------------- หน้าเจ้าหน้าที่: สแกนบัตร → มอบของที่ระลึก ---------------- */
-var STAFF_ACTIONS = { login: 1, lookup: 1, redeem: 1, undo: 1, stats: 1 };
+var STAFF_ACTIONS = { login: 1, lookup: 1, redeem: 1, undo: 1, stats: 1, roster: 1, batch: 1 };
 
 /** เมนู: ตั้ง PIN ใหม่ (เว้นว่าง = สุ่ม 6 หลักให้) · ตั้งใหม่แล้ว PIN เดิมใช้ไม่ได้ทันที และปลดล็อกกรณีใส่ผิดหลายครั้ง */
 function setStaffPin() {
@@ -137,6 +137,16 @@ function staff_(b) {
   var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
 
   if (b.action === 'login' || b.action === 'stats') return json_({ ok: true, stats: stats_(readRows_(sh)) });
+
+  // รายชื่อทั้งหมดแบบย่อ (ไม่มีเบอร์เต็ม) ให้เครื่องเจ้าหน้าที่เก็บไว้ค้นเองได้ทันที — เรียกซ้ำทุก ~15 วินาที
+  if (b.action === 'roster') {
+    var all0 = readRows_(sh), list = [];
+    all0.forEach(function (x) { if (String(x[COL.ID - 1]).trim()) list.push(rosterRow_(x)); });
+    return json_({ ok: true, rows: list, stats: stats_(all0) });
+  }
+
+  // ส่งการมอบของหลายรายการในครั้งเดียว (คิวจากเครื่องเจ้าหน้าที่) · ล็อกครั้งเดียว อ่านเฉพาะคอลัมน์ที่ต้องใช้
+  if (b.action === 'batch') return json_(batch_(sh, b.ops, station));
 
   if (b.action === 'lookup') {
     var rows = readRows_(sh), q = String(b.q || '').trim(), out = [];
@@ -177,6 +187,67 @@ function staff_(b) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function batch_(sh, ops, station) {
+  ops = (Array.isArray(ops) ? ops : []).slice(0, 50);
+  if (!ops.length) return { ok: false, error: 'ไม่มีรายการ' };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var last = lastDataRow_(sh), n = Math.max(0, last - 1);
+    var ids = n ? sh.getRange(2, COL.ID, n, 1).getValues() : [];
+    var st = n ? sh.getRange(2, COL.GOT, n, 3).getValues() : []; // L รับของ | M เวลารับ | N หมายเหตุ
+    var idx = {};
+    ids.forEach(function (v, i) { var s = String(v[0]).trim(); if (s && !(s in idx)) idx[s] = i; });
+    var out = ops.map(function (op) {
+      var tid = ticketId_(op && op.id), k = String((op && op.k) || '').slice(0, 40);
+      if (!tid || !(tid in idx)) return { k: k, id: tid || String(op && op.id), s: 'notfound' };
+      var i = idx[tid], row = st[i];
+      var who = clean_(op.by, 40).replace(/^'/, '') || station;
+      var when = opTime_(op.at), stamp = Utilities.formatDate(when, 'Asia/Bangkok', 'dd/MM HH:mm');
+      if (op.a === 'redeem') {
+        if (row[0] === true) {
+          // the same request sent again (reply lost on bad signal) → not a second hand-over
+          var same = row[1] instanceof Date && Math.abs(row[1].getTime() - when.getTime()) < 1500 && lastBy_(row[2]) === who;
+          return { k: k, id: tid, s: same ? 'redeemed' : 'already', gotAt: fmtAt_(row[1]), by: lastBy_(row[2]) };
+        }
+        row[0] = true; row[1] = when; row[2] = addNote_(row[2], 'มอบของโดย ' + who + ' ' + stamp);
+        sh.getRange(i + 2, COL.GOT, 1, 3).setValues([row]);
+        return { k: k, id: tid, s: 'redeemed', gotAt: fmtAt_(when) };
+      }
+      if (op.a === 'undo') {
+        if (row[0] !== true) return { k: k, id: tid, s: 'notgot' };
+        row[0] = false; row[1] = ''; row[2] = addNote_(row[2], 'ยกเลิกการรับโดย ' + who + ' ' + stamp);
+        sh.getRange(i + 2, COL.GOT, 1, 3).setValues([row]);
+        return { k: k, id: tid, s: 'undone' };
+      }
+      return { k: k, id: tid, s: 'bad' };
+    });
+    return { ok: true, results: out };
+  } finally {
+    lock.releaseLock();
+  }
+}
+// time the staff actually scanned (sent by the phone; may arrive later from the offline queue)
+function opTime_(ms) {
+  var n = Number(ms);
+  return n && Math.abs(n - Date.now()) < 2 * 86400000 ? new Date(n) : new Date();
+}
+function fmtAt_(at) { return at instanceof Date ? Utilities.formatDate(at, 'Asia/Bangkok', 'HH:mm น. · dd/MM/yyyy') : ''; }
+// "มอบของโดย ครูสมชาย 28/11 09:15" → "ครูสมชาย" (latest hand-over in the note)
+function lastBy_(note) {
+  var parts = String(note || '').split(' | ');
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var m = parts[i].match(/^มอบของโดย (.+?) \d\d\/\d\d \d\d:\d\d$/);
+    if (m) return m[1];
+  }
+  return '';
+}
+function rosterRow_(x) {
+  return [String(x[COL.ID - 1]).trim(), x[COL.NO - 1], String(x[COL.PREFIX - 1]), String(x[COL.FIRST - 1]), String(x[COL.LAST - 1]),
+    String(x[COL.POSITION - 1]), String(x[COL.SCHOOL - 1]), String(x[COL.PROVINCE - 1]), String(x[COL.AFF - 1]),
+    String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4), x[COL.GOT - 1] === true ? 1 : 0, fmtAt_(x[COL.GOT_AT - 1]), x[COL.GOT - 1] === true ? lastBy_(x[COL.NOTE - 1]) : ''];
 }
 
 // global brake on wrong PINs: 20 wrong tries → locked 15 min (setting a new PIN unlocks)
@@ -223,7 +294,7 @@ function rec_(x) {
     position: x[COL.POSITION - 1], school: x[COL.SCHOOL - 1], province: x[COL.PROVINCE - 1],
     affiliation: x[COL.AFF - 1], phone4: String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4),
     got: x[COL.GOT - 1] === true,
-    gotAt: at instanceof Date ? Utilities.formatDate(at, 'Asia/Bangkok', 'HH:mm น. · dd/MM/yyyy') : '',
+    gotAt: fmtAt_(at), by: x[COL.GOT - 1] === true ? lastBy_(x[COL.NOTE - 1]) : '',
     note: String(x[COL.NOTE - 1] || '')
   };
 }

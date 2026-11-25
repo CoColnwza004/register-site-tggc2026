@@ -8,6 +8,8 @@
 <title>จุดแลกของที่ระลึก · เจ้าหน้าที่ TGGC 2569</title>
 <link rel="icon" type="image/png" href="/assets/logo-mark.png">
 <link rel="apple-touch-icon" href="/assets/logo-mark.png">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
@@ -45,7 +47,7 @@
   </header>
 
   <section class="stats" aria-live="polite">
-    <div class="stats-num"><b id="statGot">–</b><span>/ <i id="statTotal">–</i> คน</span></div>
+    <div class="stats-num"><b id="statGot">–</b><span>/ <i id="statTotal">–</i> คน</span><span class="sync-pill ok" id="syncPill">ออนไลน์</span></div>
     <div class="stats-lbl">มอบของที่ระลึกแล้ว <em id="statPct"></em></div>
     <div class="bar"><i id="statBar"></i></div>
   </section>
@@ -63,8 +65,12 @@
 
   <div class="row-ctl">
     <label class="switch"><input type="checkbox" id="autoRedeem"><span class="sw"></span><span>มอบทันทีเมื่อสแกนเจอ</span></label>
-    <button class="chip" id="camBtn" type="button">ปิดกล้อง</button>
+    <button class="chip" id="camBtn" type="button">หยุดกล้อง</button>
   </div>
+  <button class="cam-help" id="camHelp" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.4-2h6.6l1.4 2h1.8A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg>
+    ตั้งให้อนุญาตกล้องถาวร (ไม่ต้องกดอนุญาตทุกครั้ง)
+  </button>
 
   <form class="search" id="searchForm" autocomplete="off">
     <input class="in" id="q" placeholder="พิมพ์รหัสบัตร / เบอร์โทร / ชื่อ" enterkeyhint="search">
