@@ -1,0 +1,35 @@
+<svg class="landscape" viewBox="0 0 400 132" aria-hidden="true">
+        <defs>
+          <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a7d5db"/><stop offset="1" stop-color="#c9e7ec"/></linearGradient>
+          <linearGradient id="hillMid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ba1a5"/><stop offset="1" stop-color="#15a8a0"/></linearGradient>
+          <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2cc394"/><stop offset="1" stop-color="#148e64"/></linearGradient>
+        </defs>
+        <path d="M0 80 C60 54 110 62 170 72 C230 82 280 46 340 52 C370 55 390 62 400 66 V132 H0Z" fill="url(#hillFar)"/>
+        <g stroke="#fcfdfd" stroke-linecap="round">
+          <path d="M318 54 V24" stroke-width="2.4"/>
+          <g class="rotor" style="transform-origin:318px 24px"><path d="M318 24 V5 M318 24 L334.5 33.5 M318 24 L301.5 33.5" stroke-width="2.2"/></g>
+          <circle cx="318" cy="24" r="2.2" fill="#fcfdfd" stroke="none"/>
+          <path d="M356 58 V34" stroke-width="2"/>
+          <g class="rotor r2" style="transform-origin:356px 34px"><path d="M356 34 V19 M356 34 L369 41.5 M356 34 L343 41.5" stroke-width="1.8"/></g>
+          <circle cx="356" cy="34" r="1.8" fill="#fcfdfd" stroke="none"/>
+        </g>
+        <path d="M0 98 C50 80 100 76 150 86 C210 98 250 82 300 84 C350 86 380 94 400 98 V132 H0Z" fill="url(#hillMid)" opacity="0.9"/>
+        <g stroke="#fcfdfd" stroke-linecap="round">
+          <path d="M66 84 V50" stroke-width="2.6"/>
+          <g class="rotor r3" style="transform-origin:66px 50px"><path d="M66 50 V28 M66 50 L85 61 M66 50 L47 61" stroke-width="2.4"/></g>
+          <circle cx="66" cy="50" r="2.4" fill="#fcfdfd" stroke="none"/>
+        </g>
+        <g>
+          <path d="M196 92 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M200 90.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M216 93 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M220 91.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M236 94 l16 -7 h12 l-16 7 Z" fill="#075f98"/><path d="M240 92.4 l16 -7" stroke="#a7d5db" stroke-width="0.8"/>
+          <path d="M204 92 v4 M224 93 v4 M244 94 v4" stroke="#0a3a5c" stroke-width="1.2"/>
+        </g>
+        <path d="M0 114 C70 98 140 102 200 110 C260 118 330 102 400 108 V132 H0Z" fill="url(#hillNear)"/>
+        <g fill="none" stroke="#fcfdfd" stroke-opacity="0.35" stroke-width="1">
+          <path d="M14 121 C80 107 140 110 200 116 C262 122 326 110 392 114"/>
+          <path d="M40 127 C96 116 150 118 205 122 C262 127 320 118 376 121"/>
+        </g>
+        <g fill="#148e64"><circle cx="128" cy="99" r="6"/><circle cx="138" cy="101" r="4.5"/><circle cx="292" cy="104" r="5"/></g>
+        <g stroke="#0e6a4b" stroke-width="1.4"><path d="M128 105 v5 M138 105.5 v4 M292 109 v4"/></g>
+      </svg>
