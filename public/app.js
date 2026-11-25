@@ -243,8 +243,11 @@
       consent: $("#consent").checked,
     };
   }
+  // teachers only: students register on the day at the 3rd floor of the Chuchart Kamphu 60th-anniversary hall
+  var STUDENT_RE = /นักเรียน|นร\.|student/i;
   function validField(k, d) {
     if (k === "phone") return /^0\d{8,9}$/.test(d.phone);
+    if (k === "position") return !!d.position && !STUDENT_RE.test(d.position);
     return !!d[k];
   }
   function fieldEl(k) { return form.querySelector('.field[data-key="' + k + '"]'); }
@@ -263,6 +266,9 @@
       el.classList.toggle("ok", ok);
       el.classList.toggle("bad", !ok && !!(touched[k] || attemptedStep[stepOf(k)]));
     });
+    var stu = STUDENT_RE.test(d.position || "");
+    $("#posErr").textContent = stu ? "ระบบนี้สำหรับครูเท่านั้น — นักเรียนไม่ต้องกรอก ให้ลงทะเบียนในวันงานที่ชั้น 3 อาคารหอประชุมชูชาติ กำภู 60 ปี (หน้าห้องประชุม)" : "กรุณาระบุตำแหน่ง";
+    if (stu) fieldEl("position").classList.add("bad");
     $("#consentBox").classList.toggle("bad", !!attemptedStep[3] && !d.consent);
     var stepOk = step === 3 ? d.consent && done === FIELDS.length : STEPS[step].every(function (k) { return validField(k, d); });
     var left = step === 3 ? 0 : STEPS[step].filter(function (k) { return !validField(k, d); }).length;

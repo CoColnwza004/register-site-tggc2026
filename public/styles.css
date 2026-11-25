@@ -277,6 +277,30 @@ a { color: var(--sea); }
 .landscape .rotor.r2 { animation-duration: 8s; }
 .landscape .rotor.r3 { animation-duration: 5s; }
 
+/* teachers-only notice */
+.lede b.only-tag { color: var(--green); white-space: nowrap; }
+.on-badge {
+  display: inline-flex; align-items: center; flex: none; padding: 3px 11px; border-radius: 999px;
+  font-family: var(--f-display); font-weight: 700; font-size: 14px; color: #fff;
+  background: linear-gradient(110deg, var(--green), var(--mint)); box-shadow: 0 4px 12px rgba(20, 142, 100, 0.3);
+}
+.only-note {
+  margin-top: 14px; padding: 14px 16px; border-radius: var(--r-md); display: grid; gap: 12px;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(120deg, var(--mint), var(--sea)) border-box;
+  border: 2px solid transparent; box-shadow: 0 10px 26px rgba(20, 142, 100, 0.14);
+}
+.on-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.on-head b { font-family: var(--f-display); font-weight: 600; font-size: 16px; color: var(--ink); line-height: 1.35; }
+.on-stu { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(201, 128, 26, 0.09); border: 1px solid rgba(201, 128, 26, 0.3); }
+.on-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #f0a43a, #c9801a); }
+.on-ico svg { width: 24px; height: 24px; }
+.on-stu p { margin: 0; font-size: 14px; line-height: 1.5; color: #5f3c06; }
+.on-stu p strong { display: block; font-family: var(--f-display); font-weight: 700; font-size: 16px; color: #8a5208; }
+.on-stu p b { color: #5f3c06; }
+.only-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 14px;
+  background: rgba(44, 195, 148, 0.1); border: 1px solid rgba(44, 195, 148, 0.35); font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.only-strip .on-badge { font-size: 13px; }
+
 /* royal trophy */
 .trophy {
   margin-top: 14px;

@@ -1,4 +1,4 @@
-// Usage: node posters/source/promo.js  → posters/ประชาสัมพันธ์การลงทะเบียน.png + .pdf
+// Usage: node posters/source/promo-long.js  → posters/ประชาสัมพันธ์การลงทะเบียน-แบบยาว.png + .pdf (earlier long-text version)
 // A4 announcement poster (text supplied by the organisers), same look as the registration site.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
@@ -213,7 +213,7 @@ ${TOPO}
   await pg.goto('file://' + f); await pg.waitForFunction(() => window.__qr); await pg.evaluate(() => document.fonts.ready); await pg.waitForTimeout(500);
   const fit = await pg.evaluate(() => { const land = document.querySelector('.foot').getBoundingClientRect().top + 60;
     return [...document.querySelectorAll('.wrap > *')].filter(e => e.getBoundingClientRect().bottom > land).map(e => e.className + ':' + Math.round(e.getBoundingClientRect().bottom) + '>' + Math.round(land)); });
-  const png = path.join(OUT, 'ประชาสัมพันธ์การลงทะเบียน.png');
+  const png = path.join(OUT, 'ประชาสัมพันธ์การลงทะเบียน-แบบยาว.png');
   await pg.screenshot({ path: png });
   const shot = 'data:image/png;base64,' + fs.readFileSync(png).toString('base64');
   const fromShot = await pg.evaluate(async (src) => { const im = new Image(); im.src = src; await im.decode();
