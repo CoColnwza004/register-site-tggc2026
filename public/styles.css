@@ -278,28 +278,26 @@ a { color: var(--sea); }
 .landscape .rotor.r3 { animation-duration: 5s; }
 
 /* teachers-only notice */
-.lede b.only-tag { color: var(--green); white-space: nowrap; }
+.lede b.only-tag { color: var(--green); font-weight: 600; white-space: nowrap; }
 .on-badge {
-  display: inline-flex; align-items: center; flex: none; padding: 3px 11px; border-radius: 999px;
-  font-family: var(--f-display); font-weight: 700; font-size: 14px; color: #fff;
-  background: linear-gradient(110deg, var(--green), var(--mint)); box-shadow: 0 4px 12px rgba(20, 142, 100, 0.3);
+  display: inline-flex; align-items: center; flex: none; padding: 2px 10px; border-radius: 999px;
+  font-weight: 600; font-size: 12.5px; color: var(--green);
+  background: rgba(44, 195, 148, 0.12); border: 1px solid rgba(44, 195, 148, 0.32);
 }
 .only-note {
-  margin-top: 14px; padding: 14px 16px; border-radius: var(--r-md); display: grid; gap: 12px;
-  background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(120deg, var(--mint), var(--sea)) border-box;
-  border: 2px solid transparent; box-shadow: 0 10px 26px rgba(20, 142, 100, 0.14);
+  margin-top: 14px; padding: 14px 16px; border-radius: var(--r-md); display: grid; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
 }
 .on-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.on-head b { font-family: var(--f-display); font-weight: 600; font-size: 16px; color: var(--ink); line-height: 1.35; }
-.on-stu { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(201, 128, 26, 0.09); border: 1px solid rgba(201, 128, 26, 0.3); }
-.on-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #f0a43a, #c9801a); }
-.on-ico svg { width: 24px; height: 24px; }
-.on-stu p { margin: 0; font-size: 14px; line-height: 1.5; color: #5f3c06; }
-.on-stu p strong { display: block; font-family: var(--f-display); font-weight: 700; font-size: 16px; color: #8a5208; }
-.on-stu p b { color: #5f3c06; }
-.only-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 14px;
-  background: rgba(44, 195, 148, 0.1); border: 1px solid rgba(44, 195, 148, 0.35); font-size: 13.5px; line-height: 1.45; color: var(--muted); }
-.only-strip .on-badge { font-size: 13px; }
+.on-head b { font-weight: 600; font-size: 15px; color: var(--ink); line-height: 1.4; }
+.on-stu { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: center; padding-top: 10px; border-top: 1px dashed var(--line-strong); }
+.on-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--teal); background: var(--tint); }
+.on-ico svg { width: 20px; height: 20px; }
+.on-stu p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.on-stu p strong { display: block; font-weight: 600; font-size: 14.5px; color: var(--ink); }
+.on-stu p b { font-weight: 600; color: var(--ink); }
+.only-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; padding: 9px 12px; border-radius: 14px;
+  background: var(--tint); border: 1px solid var(--line); font-size: 13px; line-height: 1.45; color: var(--muted); }
 
 /* royal trophy */
 .trophy {
