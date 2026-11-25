@@ -48,7 +48,7 @@ function doPost(e) {
     lock.waitLock(25000);
     try {
       var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
-      var last = sh.getLastRow();
+      var last = lastDataRow_(sh);
       var rows = last >= 2 ? sh.getRange(2, 1, last - 1, NCOL).getValues() : [];
 
       // 1) same ticket id (edit from the same phone/browser)  2) same phone number → update that row
@@ -66,7 +66,7 @@ function doPost(e) {
       var ids = {};
       rows.forEach(function (x) { ids[x[COL.ID - 1]] = 1; });
       var id = /^TG-[2-9A-HJ-NP-Z]{5}$/.test(d.id) && !ids[d.id] ? d.id : newId_(ids);
-      var no = rows.length + 1;
+      var no = rows.length + 1; // rows = registrations up to the last ticket id
       var row = last + 1;
       sh.getRange(row, 1, 1, NCOL).setValues([[
         no, id, new Date(), d.prefix, d.first, d.last, d.position,
@@ -85,7 +85,7 @@ function doPost(e) {
 /** เปิด URL /exec ในเบราว์เซอร์เพื่อตรวจว่าระบบทำงาน */
 function doGet() {
   var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
-  return json_({ ok: true, service: 'TGGC 2569 registration', registered: Math.max(0, sh.getLastRow() - 1) });
+  return json_({ ok: true, service: 'TGGC 2569 registration', registered: lastDataRow_(sh) - 1 });
 }
 
 /** ติ๊กช่อง "รับของที่ระลึก" แล้วลงเวลาให้อัตโนมัติ */
@@ -190,14 +190,26 @@ function checkPin_(pin) {
   return '';
 }
 
+// rows 2..last registration (index i ↔ sheet row i + 2); not filtered so row numbers stay correct
 function readRows_(sh) {
-  var last = sh.getLastRow();
-  return last >= 2 ? sh.getRange(2, 1, last - 1, NCOL).getValues().filter(function (x) { return x[COL.ID - 1]; }) : [];
+  var last = lastDataRow_(sh);
+  return last >= 2 ? sh.getRange(2, 1, last - 1, NCOL).getValues() : [];
+}
+/**
+ * แถวสุดท้ายที่มีรหัสบัตร (คอลัมน์ B) — ใช้แทน getLastRow() เพราะช่องติ๊กที่เตรียมไว้ล่วงหน้า
+ * (FALSE ทั้งคอลัมน์ L) ทำให้ getLastRow() นับเกินไปถึงแถวสุดท้ายของช่องติ๊ก
+ */
+function lastDataRow_(sh) {
+  var n = sh.getLastRow();
+  if (n < 2) return 1;
+  var ids = sh.getRange(2, COL.ID, n - 1, 1).getValues();
+  for (var i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]).trim()) return i + 2;
+  return 1;
 }
 function stats_(rows) {
-  var got = 0;
-  rows.forEach(function (x) { if (x[COL.GOT - 1] === true) got++; });
-  return { total: rows.length, got: got };
+  var got = 0, total = 0;
+  rows.forEach(function (x) { if (!x[COL.ID - 1]) return; total++; if (x[COL.GOT - 1] === true) got++; });
+  return { total: total, got: got };
 }
 function ticketId_(s) {
   var m = String(s || '').toUpperCase().match(/TG-?([2-9A-HJ-NP-Z]{5})/);
@@ -228,7 +240,7 @@ function resetRegistrations() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName(SHEET_NAME);
-  var count = Math.max(0, sh.getLastRow() - 1);
+  var count = lastDataRow_(sh) - 1;
   if (!count) { ui.alert('ยังไม่มีข้อมูลผู้ลงทะเบียน ไม่ต้องรีเซ็ต'); return; }
 
   var ok = ui.alert('รีเซ็ตข้อมูลลงทะเบียน',
@@ -250,8 +262,9 @@ function resetRegistrations() {
     backup.setTabColor('#a7d5db');
     ss.setActiveSheet(sh);
 
-    var last = sh.getLastRow();
+    var last = lastDataRow_(sh);
     sh.getRange(2, 1, last - 1, NCOL).clearContent().clearNote();
+    sh.getRange(2, COL.GOT, last - 1, 1).uncheck(); // keep the ready-made checkboxes as unticked
     clearLookup();
   } finally {
     lock.releaseLock();

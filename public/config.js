@@ -6,7 +6,7 @@
  * LOGO_URL: โลโก้ (เฉพาะสัญลักษณ์ ไม่มีตัวหนังสือ) ใช้บนบัตรและไอคอน · เว้นว่าง = ใช้โลโก้เวกเตอร์สำรองในตัว
  */
 window.TGGC_CONFIG = {
-  ENDPOINT: "https://script.google.com/macros/s/AKfycbxggVwhBmWYJFF9--yvyKtEcV9D09_TkNOSRWWYktaoFFfvIaOi1c8BmCI0L8wJ70yE/exec",
+  ENDPOINT: "https://script.google.com/macros/s/AKfycbxl4saZgQY5lk0Gz832CwZRRYBZAMvSQSIUs1wGkKZgVtXBich5v9MnQMUKNk7BrT4_/exec",
   EVENT_START: "2026-11-28T08:00:00+07:00",
   LOGO_URL: "assets/logo-mark.png",
 };
