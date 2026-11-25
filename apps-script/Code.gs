@@ -18,11 +18,13 @@
  * คอลัมน์ในแท็บ "ลงทะเบียน":
  *  A ลำดับ | B รหัสบัตร | C วันเวลาลงทะเบียน | D คำนำหน้า | E ชื่อ | F นามสกุล | G ตำแหน่ง
  *  H โรงเรียน | I จังหวัด | J สังกัด | K เบอร์โทร | L รับของที่ระลึก (☑) | M เวลารับของ | N หมายเหตุ
+ *  O เจ้าหน้าที่ผู้สแกน (ชื่อที่เจ้าหน้าที่กรอกตอนเข้าหน้า /staff)
  */
 
 var SHEET_NAME = 'ลงทะเบียน';
-var NCOL = 14;
-var COL = { NO: 1, ID: 2, TIME: 3, PREFIX: 4, FIRST: 5, LAST: 6, POSITION: 7, SCHOOL: 8, PROVINCE: 9, AFF: 10, PHONE: 11, GOT: 12, GOT_AT: 13, NOTE: 14 };
+var NCOL = 14;     // columns written by the registration form (A–N)
+var NCOL_ALL = 15; // + O เจ้าหน้าที่ผู้สแกน
+var COL = { NO: 1, ID: 2, TIME: 3, PREFIX: 4, FIRST: 5, LAST: 6, POSITION: 7, SCHOOL: 8, PROVINCE: 9, AFF: 10, PHONE: 11, GOT: 12, GOT_AT: 13, NOTE: 14, BY: 15 };
 
 function doPost(e) {
   try {
@@ -95,6 +97,8 @@ function onEdit(e) {
   var target = r.getSheet().getRange(r.getRow(), COL.GOT_AT, r.getNumRows(), 1);
   var vals = r.getValues().map(function (v) { return [v[0] === true ? new Date() : '']; });
   target.setValues(vals);
+  r.getSheet().getRange(r.getRow(), COL.BY, r.getNumRows(), 1)
+    .setValues(vals.map(function (v) { return [v[0] ? '(ติ๊กใน Sheet)' : '']; }));
 }
 
 /* ---------------- เมนูใน Google Sheet ---------------- */
@@ -175,14 +179,14 @@ function staff_(b) {
     if (b.action === 'redeem') {
       if (row[COL.GOT - 1] === true) return json_({ ok: true, found: true, already: true, rec: rec_(row), stats: stats_(all) });
       sh.getRange(r, COL.GOT, 1, 2).setValues([[true, now]]);
-      sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'มอบของโดย ' + station + ' ' + stamp));
-      row[COL.GOT - 1] = true; row[COL.GOT_AT - 1] = now;
+      sh.getRange(r, COL.NOTE, 1, 2).setValues([[addNote_(row[COL.NOTE - 1], 'มอบของโดย ' + station + ' ' + stamp), station]]);
+      row[COL.GOT - 1] = true; row[COL.GOT_AT - 1] = now; row[COL.BY - 1] = station;
       return json_({ ok: true, found: true, redeemed: true, rec: rec_(row), stats: stats_(all) });
     }
     // undo (staff tapped by mistake)
     sh.getRange(r, COL.GOT, 1, 2).setValues([[false, '']]);
-    sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'ยกเลิกการรับโดย ' + station + ' ' + stamp));
-    row[COL.GOT - 1] = false; row[COL.GOT_AT - 1] = '';
+    sh.getRange(r, COL.NOTE, 1, 2).setValues([[addNote_(row[COL.NOTE - 1], 'ยกเลิกการรับโดย ' + station + ' ' + stamp), '']]);
+    row[COL.GOT - 1] = false; row[COL.GOT_AT - 1] = ''; row[COL.BY - 1] = '';
     return json_({ ok: true, found: true, undone: true, rec: rec_(row), stats: stats_(all) });
   } finally {
     lock.releaseLock();
@@ -197,7 +201,7 @@ function batch_(sh, ops, station) {
   try {
     var last = lastDataRow_(sh), n = Math.max(0, last - 1);
     var ids = n ? sh.getRange(2, COL.ID, n, 1).getValues() : [];
-    var st = n ? sh.getRange(2, COL.GOT, n, 3).getValues() : []; // L รับของ | M เวลารับ | N หมายเหตุ
+    var st = n ? sh.getRange(2, COL.GOT, n, 4).getValues() : []; // L รับของ | M เวลารับ | N หมายเหตุ | O ผู้สแกน
     var idx = {};
     ids.forEach(function (v, i) { var s = String(v[0]).trim(); if (s && !(s in idx)) idx[s] = i; });
     var out = ops.map(function (op) {
@@ -209,17 +213,18 @@ function batch_(sh, ops, station) {
       if (op.a === 'redeem') {
         if (row[0] === true) {
           // the same request sent again (reply lost on bad signal) → not a second hand-over
-          var same = row[1] instanceof Date && Math.abs(row[1].getTime() - when.getTime()) < 1500 && lastBy_(row[2]) === who;
-          return { k: k, id: tid, s: same ? 'redeemed' : 'already', gotAt: fmtAt_(row[1]), by: lastBy_(row[2]) };
+          var prevBy = String(row[3] || '') || lastBy_(row[2]);
+          var same = row[1] instanceof Date && Math.abs(row[1].getTime() - when.getTime()) < 1500 && prevBy === who;
+          return { k: k, id: tid, s: same ? 'redeemed' : 'already', gotAt: fmtAt_(row[1]), by: prevBy };
         }
-        row[0] = true; row[1] = when; row[2] = addNote_(row[2], 'มอบของโดย ' + who + ' ' + stamp);
-        sh.getRange(i + 2, COL.GOT, 1, 3).setValues([row]);
+        row[0] = true; row[1] = when; row[2] = addNote_(row[2], 'มอบของโดย ' + who + ' ' + stamp); row[3] = who;
+        sh.getRange(i + 2, COL.GOT, 1, 4).setValues([row]);
         return { k: k, id: tid, s: 'redeemed', gotAt: fmtAt_(when) };
       }
       if (op.a === 'undo') {
         if (row[0] !== true) return { k: k, id: tid, s: 'notgot' };
-        row[0] = false; row[1] = ''; row[2] = addNote_(row[2], 'ยกเลิกการรับโดย ' + who + ' ' + stamp);
-        sh.getRange(i + 2, COL.GOT, 1, 3).setValues([row]);
+        row[0] = false; row[1] = ''; row[2] = addNote_(row[2], 'ยกเลิกการรับโดย ' + who + ' ' + stamp); row[3] = '';
+        sh.getRange(i + 2, COL.GOT, 1, 4).setValues([row]);
         return { k: k, id: tid, s: 'undone' };
       }
       return { k: k, id: tid, s: 'bad' };
@@ -244,10 +249,11 @@ function lastBy_(note) {
   }
   return '';
 }
+function by_(x) { return String(x[COL.BY - 1] || '') || lastBy_(x[COL.NOTE - 1]); }
 function rosterRow_(x) {
   return [String(x[COL.ID - 1]).trim(), x[COL.NO - 1], String(x[COL.PREFIX - 1]), String(x[COL.FIRST - 1]), String(x[COL.LAST - 1]),
     String(x[COL.POSITION - 1]), String(x[COL.SCHOOL - 1]), String(x[COL.PROVINCE - 1]), String(x[COL.AFF - 1]),
-    String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4), x[COL.GOT - 1] === true ? 1 : 0, fmtAt_(x[COL.GOT_AT - 1]), x[COL.GOT - 1] === true ? lastBy_(x[COL.NOTE - 1]) : ''];
+    String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4), x[COL.GOT - 1] === true ? 1 : 0, fmtAt_(x[COL.GOT_AT - 1]), x[COL.GOT - 1] === true ? by_(x) : ''];
 }
 
 // global brake on wrong PINs: 20 wrong tries → locked 15 min (setting a new PIN unlocks)
@@ -264,7 +270,8 @@ function checkPin_(pin) {
 // rows 2..last registration (index i ↔ sheet row i + 2); not filtered so row numbers stay correct
 function readRows_(sh) {
   var last = lastDataRow_(sh);
-  return last >= 2 ? sh.getRange(2, 1, last - 1, NCOL).getValues() : [];
+  var nc = Math.min(NCOL_ALL, sh.getMaxColumns()); // column O may not exist on an older copy of the Sheet
+  return last >= 2 ? sh.getRange(2, 1, last - 1, nc).getValues() : [];
 }
 /**
  * แถวสุดท้ายที่มีรหัสบัตร (คอลัมน์ B) — ใช้แทน getLastRow() เพราะช่องติ๊กที่เตรียมไว้ล่วงหน้า
@@ -294,7 +301,7 @@ function rec_(x) {
     position: x[COL.POSITION - 1], school: x[COL.SCHOOL - 1], province: x[COL.PROVINCE - 1],
     affiliation: x[COL.AFF - 1], phone4: String(x[COL.PHONE - 1]).replace(/\D/g, '').slice(-4),
     got: x[COL.GOT - 1] === true,
-    gotAt: fmtAt_(at), by: x[COL.GOT - 1] === true ? lastBy_(x[COL.NOTE - 1]) : '',
+    gotAt: fmtAt_(at), by: x[COL.GOT - 1] === true ? by_(x) : '',
     note: String(x[COL.NOTE - 1] || '')
   };
 }
@@ -334,7 +341,7 @@ function resetRegistrations() {
     ss.setActiveSheet(sh);
 
     var last = lastDataRow_(sh);
-    sh.getRange(2, 1, last - 1, NCOL).clearContent().clearNote();
+    sh.getRange(2, 1, last - 1, Math.min(NCOL_ALL, sh.getMaxColumns())).clearContent().clearNote();
     sh.getRange(2, COL.GOT, last - 1, 1).uncheck(); // keep the ready-made checkboxes as unticked
     clearLookup();
   } finally {

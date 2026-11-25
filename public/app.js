@@ -971,6 +971,7 @@
     if (name === "ticket" && !current) { var l = tickets(); if (l.length) current = l[0]; else name = "home"; }
     view = name;
     Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k]).hidden = k !== name; });
+    document.body.setAttribute("data-view", name); // wide-screen layouts key off this
     $("#dockHome").hidden = name !== "home";
     $("#dockReg").hidden = name !== "register";
     $("#dockTicket").hidden = name !== "ticket";

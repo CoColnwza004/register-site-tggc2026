@@ -16,6 +16,14 @@
 <link rel="stylesheet" href="/staff/staff.css">
 </head>
 <body>
+<div class="ambient" aria-hidden="true">
+  <i class="glow g1"></i><i class="glow g2"></i><i class="grid"></i>
+  <svg class="topo t1" viewBox="-200 -200 400 400"><defs><path id="hill" d="M0-150C62-150 140-104 150-38 160 30 120 96 58 128 0 158-74 150-118 104-158 62-162 0-140-56-114-122-62-150 0-150Z"/></defs>
+    <use href="#hill"/><use href="#hill" transform="scale(.84) rotate(8)"/><use href="#hill" transform="scale(.68) rotate(16)"/><use href="#hill" transform="scale(.53) rotate(24) translate(8 -6)"/><use href="#hill" transform="scale(.38) rotate(32) translate(16 -10)"/><use href="#hill" transform="scale(.24) rotate(40) translate(30 -16)"/><use href="#hill" class="idx" transform="scale(.12) rotate(48) translate(60 -30)"/></svg>
+  <svg class="topo t2" viewBox="-200 -200 400 400"><use href="#hill" transform="rotate(140)"/><use href="#hill" transform="scale(.82) rotate(150)"/><use href="#hill" transform="scale(.64) rotate(160)"/><use href="#hill" transform="scale(.47) rotate(170) translate(10 4)"/><use href="#hill" transform="scale(.3) rotate(180) translate(20 8)"/><use href="#hill" class="idx" transform="scale(.15) rotate(190) translate(40 14)"/></svg>
+  <svg class="globe" viewBox="-110 -110 220 220"><circle r="100"/><ellipse rx="34" ry="100"/><ellipse rx="70" ry="100"/><path d="M0-100V100M-100 0H100"/><ellipse ry="34" rx="94" transform="translate(0 -50) scale(1 .3)"/><ellipse rx="94" ry="34" transform="translate(0 50) scale(1 .3)"/><ellipse class="orb" rx="150" ry="36" transform="rotate(-18)"/><circle class="sat" r="3.4" cx="142" cy="-46"/></svg>
+  <span class="coord">LAT 13.9°N · LONG 100.5°E · TGGC 2026 · SOUVENIR POINT</span>
+</div>
 
 <!-- ============ login ============ -->
 <main class="login" id="loginView">
@@ -46,12 +54,15 @@
     </button>
   </header>
 
+  <div class="col-side">
   <section class="stats" aria-live="polite">
     <div class="stats-num"><b id="statGot">–</b><span>/ <i id="statTotal">–</i> คน</span><span class="sync-pill ok" id="syncPill">ออนไลน์</span></div>
     <div class="stats-lbl">มอบของที่ระลึกแล้ว <em id="statPct"></em></div>
     <div class="bar"><i id="statBar"></i></div>
   </section>
+  </div>
 
+  <div class="col-scan">
   <section class="scanner" id="scanner">
     <video id="video" playsinline muted autoplay></video>
     <div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b class="laser"></b></div>
@@ -71,6 +82,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.4-2h6.6l1.4 2h1.8A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg>
     ตั้งให้อนุญาตกล้องถาวร (ไม่ต้องกดอนุญาตทุกครั้ง)
   </button>
+  </div>
+
+  <div class="col-side2">
 
   <form class="search" id="searchForm" autocomplete="off">
     <input class="in" id="q" placeholder="พิมพ์รหัสบัตร / เบอร์โทร / ชื่อ" enterkeyhint="search">
@@ -83,6 +97,7 @@
     <h2>ล่าสุดบนเครื่องนี้</h2>
     <ol id="logList"><li class="empty">ยังไม่มีรายการ</li></ol>
   </section>
+  </div>
 </main>
 
 <!-- ============ result sheet ============ -->
