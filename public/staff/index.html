@@ -23,8 +23,8 @@
     <h1>จุดแลกของที่ระลึก</h1>
     <p class="login-sub">สแกนบัตรผู้เข้าร่วม แล้วบันทึกการรับของเข้า Google Sheet ทันที</p>
     <form id="loginForm" autocomplete="off" novalidate>
-      <label class="fl" for="station">ชื่อจุด / ผู้ปฏิบัติงาน</label>
-      <input class="in" id="station" maxlength="40" placeholder="เช่น จุด 1 · ครูสมชาย" enterkeyhint="next">
+      <label class="fl" for="station">ชื่อเจ้าหน้าที่</label>
+      <input class="in" id="station" maxlength="40" placeholder="เช่น ครูสมชาย" autocomplete="name" enterkeyhint="next">
       <label class="fl" for="pin">PIN เจ้าหน้าที่</label>
       <input class="in pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="••••••" enterkeyhint="go" autocomplete="off">
       <p class="err" id="loginErr" hidden></p>

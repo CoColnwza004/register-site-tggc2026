@@ -81,7 +81,7 @@
   /* ---------------- login ---------------- */
   function showApp() {
     $("#loginView").hidden = true; $("#appView").hidden = false;
-    $("#stationTxt").textContent = session.station || "จุดแลกของที่ระลึก";
+    $("#stationTxt").textContent = "เจ้าหน้าที่: " + (session.station || "—");
     renderLog();
     refreshStats();
     startCam();
@@ -100,6 +100,7 @@
     ev.preventDefault();
     var pin = $("#pin").value.replace(/\D/g, ""), station = $("#station").value.trim().slice(0, 40);
     var e = $("#loginErr");
+    if (!station) { e.hidden = false; e.textContent = "กรุณากรอกชื่อเจ้าหน้าที่"; $("#station").focus(); return; }
     if (pin.length < 6) { e.hidden = false; e.textContent = "กรุณาใส่ PIN อย่างน้อย 6 หลัก"; return; }
     var btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "กำลังตรวจสอบ…";
     session = { pin: pin, station: station };

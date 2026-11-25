@@ -133,7 +133,7 @@ function staff_(b) {
   if (!STAFF_ACTIONS[b.action]) return json_({ ok: false, error: 'คำสั่งไม่ถูกต้อง' });
   var pinErr = checkPin_(b.pin);
   if (pinErr) return json_({ ok: false, auth: false, error: pinErr });
-  var station = clean_(b.station, 40).replace(/^'/, '') || 'จุดแลกของที่ระลึก';
+  var station = clean_(b.station, 40).replace(/^'/, '') || 'เจ้าหน้าที่'; // ชื่อเจ้าหน้าที่ที่กรอกตอนเข้าระบบ
   var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
 
   if (b.action === 'login' || b.action === 'stats') return json_({ ok: true, stats: stats_(readRows_(sh)) });
@@ -165,13 +165,13 @@ function staff_(b) {
     if (b.action === 'redeem') {
       if (row[COL.GOT - 1] === true) return json_({ ok: true, found: true, already: true, rec: rec_(row), stats: stats_(all) });
       sh.getRange(r, COL.GOT, 1, 2).setValues([[true, now]]);
-      sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'รับของ: ' + station + ' ' + stamp));
+      sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'มอบของโดย ' + station + ' ' + stamp));
       row[COL.GOT - 1] = true; row[COL.GOT_AT - 1] = now;
       return json_({ ok: true, found: true, redeemed: true, rec: rec_(row), stats: stats_(all) });
     }
     // undo (staff tapped by mistake)
     sh.getRange(r, COL.GOT, 1, 2).setValues([[false, '']]);
-    sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'ยกเลิกการรับ: ' + station + ' ' + stamp));
+    sh.getRange(r, COL.NOTE).setValue(addNote_(row[COL.NOTE - 1], 'ยกเลิกการรับโดย ' + station + ' ' + stamp));
     row[COL.GOT - 1] = false; row[COL.GOT_AT - 1] = '';
     return json_({ ok: true, found: true, undone: true, rec: rec_(row), stats: stats_(all) });
   } finally {
