@@ -663,7 +663,7 @@
     if (detector) {
       detector.detect(video).then(function (codes) {
         if (codes && codes.length) onCode(codes[0].rawValue);
-        next(90);
+        next(50);
       }).catch(function () { next(250); });
       return;
     }
@@ -676,10 +676,13 @@
     cx.drawImage(video, (vw - side) / 2, (vh - side) / 2, side, side, 0, 0, size, size);
     var hit = window.jsQR(cx.getImageData(0, 0, size, size).data, size, size, { inversionAttempts: "dontInvert" });
     if (hit && hit.data) onCode(hit.data);
-    next(100);
+    next(60);
   }
 
   /* ---------------- boot ---------------- */
+  // remember "มอบทันทีเมื่อสแกนเจอ" on this phone, so a reload doesn't switch it back off
+  $("#autoRedeem").checked = !!load(KEY + ".auto", false);
+  $("#autoRedeem").addEventListener("change", function () { store(KEY + ".auto", $("#autoRedeem").checked); });
   if (!ENDPOINT) { $("#pin").placeholder = "ตัวอย่าง: 123456"; }
   if (session && session.pin) showApp();
   else { $("#station").value = (load(KEY + ".station", "") || ""); }
